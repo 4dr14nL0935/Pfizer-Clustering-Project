@@ -42,7 +42,7 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
 .sparse-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .sparse-name{width:170px;text-align:right;font-size:11px;font-family:'Courier New',monospace;color:var(--pf-blue);font-weight:600}
 .sparse-bar-bg{flex:1;height:16px;background:#EDF2F7;border-radius:4px;overflow:hidden}
-.sparse-bar{height:100%;border-radius:4px;transition:width .8s}
+.sparse-bar{height:100%;border-radius:4px}
 .sparse-pct{width:45px;font-size:11px;color:var(--pf-textl);font-weight:600;text-align:right}
 .legend{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
 .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
@@ -60,6 +60,7 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
     <span class="tag">Fase 1 · Datos sin transformar · Nivel HCP × Semana</span>
   </div>
 </div>
+
 <div class="stats-strip">
   <div class="stat-card"><div class="num">1.8M</div><div class="lbl">Filas</div></div>
   <div class="stat-card"><div class="num">20,931</div><div class="lbl">HCPs</div></div>
@@ -67,10 +68,11 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
   <div class="stat-card"><div class="num">68</div><div class="lbl">Variables</div></div>
   <div class="stat-card"><div class="num">11,899</div><div class="lbl">Etiquetados</div></div>
   <div class="stat-card"><div class="num">9,032</div><div class="lbl">Sin etiquetar</div></div>
-  <div class="stat-card"><div class="num">43%</div><div class="lbl">Target NaN</div></div>
+  <div class="stat-card"><div class="num">57%</div><div class="lbl">Labeled</div></div>
 </div>
 
 <div class="container">
+
 <div class="section">
   <div class="section-head">
     <div class="ico">TGT</div>
@@ -86,20 +88,21 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
       <div class="chart-box"><canvas id="labeledBar"></canvas></div>
       <div class="insight">
         <span class="tag-insight">Hallazgo</span>
-        <strong>56.8%</strong> de los HCPs tienen etiqueta. SEG_A domina con 53.8%, seguido de SEG_B (28.1%) y SEG_C (18.0%).
+        <strong>56.8%</strong> de los HCPs tienen etiqueta.
       </div>
     </div>
   </div>
 </div>
+
 <div class="section">
   <div class="section-head">
     <div class="ico">PRF</div>
     <h2>Perfil por Segmento (Agregado 86 semanas)</h2>
   </div>
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#0033A0"></div>SEG_A (bajo volumen)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#00A3E0"></div>SEG_B (medio volumen)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#6E3FA3"></div>SEG_C (alto volumen)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0033A0"></div>SEG_A</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00A3E0"></div>SEG_B</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6E3FA3"></div>SEG_C</div>
   </div>
   <div class="grid2">
     <div class="card"><h3>UC TRx</h3><div class="chart-box"><canvas id="profileUC"></canvas></div></div>
@@ -108,6 +111,7 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
     <div class="card"><h3>Brand 1 TRx</h3><div class="chart-box"><canvas id="profileB1"></canvas></div></div>
   </div>
 </div>
+
 <div class="section">
   <div class="section-head">
     <div class="ico">CMP</div>
@@ -116,40 +120,12 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
   <div class="card">
     <table>
       <thead><tr><th>Variable</th><th>SEG_A</th><th>SEG_B</th><th>SEG_C</th></tr></thead>
-      <tbody><tr>
-      <td class="col-name">UC_TRX</td>
-      <td>14.73</td>
-      <td>44.49</td>
-      <td>61.15</td>
-    </tr><tr>
-      <td class="col-name">ORAL_TRX</td>
-      <td>2.01</td>
-      <td>10.81</td>
-      <td>12.04</td>
-    </tr><tr>
-      <td class="col-name">IL23_TRX</td>
-      <td>1.09</td>
-      <td>5.13</td>
-      <td>8.09</td>
-    </tr><tr>
-      <td class="col-name">BRAND1_TRX</td>
-      <td>0.04</td>
-      <td>0.16</td>
-      <td>0.15</td>
-    </tr><tr>
-      <td class="col-name">N_CLMOTHERS</td>
-      <td>29.04</td>
-      <td>76.33</td>
-      <td>108.34</td>
-    </tr><tr>
-      <td class="col-name">DETAILS</td>
-      <td>5.28</td>
-      <td>8.94</td>
-      <td>8.71</td>
-    </tr></tbody>
+      <tbody>
+<tr><td class='col-name'>UC_TRX</td><td>14.73</td><td>44.49</td><td>61.15</td></tr><tr><td class='col-name'>ORAL_TRX</td><td>2.01</td><td>10.81</td><td>12.04</td></tr><tr><td class='col-name'>IL23_TRX</td><td>1.09</td><td>5.13</td><td>8.09</td></tr><tr><td class='col-name'>BRAND1_TRX</td><td>0.04</td><td>0.16</td><td>0.15</td></tr><tr><td class='col-name'>BRAND2_TRX</td><td>0.17</td><td>0.70</td><td>0.63</td></tr><tr><td class='col-name'>N_CLMOTHERS</td><td>29.04</td><td>76.33</td><td>108.34</td></tr>      </tbody>
     </table>
   </div>
 </div>
+
 <div class="section">
   <div class="section-head">
     <div class="ico">SPA</div>
@@ -169,6 +145,7 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
     <div class="chart-box tall"><canvas id="corrChart"></canvas></div>
   </div>
 </div>
+
 <div class="section">
   <div class="section-head">
     <div class="ico">TMP</div>
@@ -179,6 +156,7 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
     <div class="card"><h3>Brand 1 TRx por Trimestre</h3><div class="chart-box"><canvas id="tempB1"></canvas></div></div>
   </div>
 </div>
+
 <div class="section">
   <div class="section-head">
     <div class="ico">DSC</div>
@@ -191,63 +169,64 @@ td.col-name{font-weight:700;font-family:'Courier New',monospace;color:var(--pf-b
     </table>
   </div>
 </div>
+
 </div>
 
 <div class="footer">
   <p>Pfizer Data Science Team · Tec de Monterrey Capstone Project 2026</p>
   <p>"Breakthroughs that change patients' lives"</p>
 </div>
+
 <script>
 const SEGA='#0033A0', SEGB='#00A3E0', SEGC='#6E3FA3', SEGUN='#B0BEC5';
 Chart.defaults.font.family = "'Noto Sans', sans-serif";
 Chart.defaults.font.size = 11;
 
-// TARGET: Pie
-new Chart(document.getElementById('segPie'),{
+// PIE
+new Chart(document.getElementById('segPie'),{{
   type:'doughnut',
-  data:{
-    labels:['SEG_A (6,406)','SEG_B (3,349)','SEG_C (2,144)','Sin etiquetar (9,032)'],
-    datasets:[{data:[6406,3349,2144,9032],backgroundColor:[SEGA,SEGB,SEGC,SEGUN],borderWidth:2,borderColor:'#fff'}]
-  },
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:12,usePointStyle:true,pointStyle:'rectRounded'}}}}
-});
+  data:{{
+    labels:['SEG_A ({seg_a:,})','SEG_B ({seg_b:,})','SEG_C ({seg_c:,})','Sin etiquetar ({unlabeled:,})'],
+    datasets:[{{data:[{seg_a},{seg_b},{seg_c},{unlabeled}],backgroundColor:[SEGA,SEGB,SEGC,SEGUN],borderWidth:2,borderColor:'#fff'}}]
+  }},
+  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{position:'bottom'}}}}}}
+}});
 
-// TARGET: Bar
-new Chart(document.getElementById('labeledBar'),{
+// BAR
+new Chart(document.getElementById('labeledBar'),{{
   type:'bar',
-  data:{
+  data:{{
     labels:['SEG_A','SEG_B','SEG_C','Sin etiqueta'],
-    datasets:[{data:[6406,3349,2144,9032],backgroundColor:[SEGA,SEGB,SEGC,SEGUN],borderRadius:6}]
-  },
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
-});
+    datasets:[{{data:[{seg_a},{seg_b},{seg_c},{unlabeled}],backgroundColor:[SEGA,SEGB,SEGC,SEGUN],borderRadius:6}}]
+  }},
+  options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}},scales:{{y:{{beginAtZero:true}}}}}}
+}});
 
 // PROFILES
-function profileChart(id,data){
-  new Chart(document.getElementById(id),{
+function profileChart(id,data){{
+  new Chart(document.getElementById(id),{{
     type:'bar',
-    data:{
+    data:{{
       labels:['Media','Mediana'],
       datasets:[
-        {label:'SEG_A',data:[data.A[0],data.A[1]],backgroundColor:SEGA,borderRadius:4},
-        {label:'SEG_B',data:[data.B[0],data.B[1]],backgroundColor:SEGB,borderRadius:4},
-        {label:'SEG_C',data:[data.C[0],data.C[1]],backgroundColor:SEGC,borderRadius:4}
+        {{label:'SEG_A',data:[data.A[0],data.A[1]],backgroundColor:SEGA,borderRadius:4}},
+        {{label:'SEG_B',data:[data.B[0],data.B[1]],backgroundColor:SEGB,borderRadius:4}},
+        {{label:'SEG_C',data:[data.C[0],data.C[1]],backgroundColor:SEGC,borderRadius:4}}
       ]
-    },
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}
-  });
-}
+    }},
+    options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{position:'top'}}}},scales:{{y:{{beginAtZero:true}}}}}}
+  }});
+}}
 profileChart('profileUC',{A:[np.float64(14.73), np.float64(10.3)],B:[np.float64(44.49), np.float64(30.14)],C:[np.float64(61.15), np.float64(33.04)]});
 profileChart('profileCLM',{A:[np.float64(29.04), np.float64(20.0)],B:[np.float64(76.33), np.float64(49.6)],C:[np.float64(108.34), np.float64(61.2)]});
 profileChart('profileDET',{A:[np.float64(5.28), np.float64(1.8)],B:[np.float64(8.94), np.float64(6.0)],C:[np.float64(8.71), np.float64(6.0)]});
 profileChart('profileB1',{A:[np.float64(0.04), np.float64(0.0)],B:[np.float64(0.16), np.float64(0.0)],C:[np.float64(0.15), np.float64(0.0)]});
 
 // CORRELATION
-const corrLabels=["UC_TRX", "ORAL_TRX", "IL23_TRX", "B1_TRX", "B2_TRX", "CLM_BRAND3", "CLM_OTHERS", "DETAILS"];
-const corrData=[[1.0, 0.869, 0.763, 0.255, 0.336, 0.831, 0.946, 0.224], [0.869, 1.0, 0.645, 0.356, 0.412, 0.942, 0.763, 0.261], [0.763, 0.645, 1.0, 0.225, 0.248, 0.64, 0.733, 0.162], [0.255, 0.356, 0.225, 1.0, 0.267, 0.298, 0.2, 0.268], [0.336, 0.412, 0.248, 0.267, 1.0, 0.311, 0.29, 0.266], [0.831, 0.942, 0.64, 0.298, 0.311, 1.0, 0.785, 0.208], [0.946, 0.763, 0.733, 0.2, 0.29, 0.785, 1.0, 0.189], [0.224, 0.261, 0.162, 0.268, 0.266, 0.208, 0.189, 1.0]];
+const corrLabels=["UC_TRX", "ORAL_TRX", "IL23_TRX", "B1_TRX", "B2_TRX", "CLM_OTHERS", "DETAILS"];
+const corrData=[[1.0, 0.869, 0.763, 0.255, 0.336, 0.946, 0.224], [0.869, 1.0, 0.645, 0.356, 0.412, 0.763, 0.261], [0.763, 0.645, 1.0, 0.225, 0.248, 0.733, 0.162], [0.255, 0.356, 0.225, 1.0, 0.267, 0.2, 0.268], [0.336, 0.412, 0.248, 0.267, 1.0, 0.29, 0.266], [0.946, 0.763, 0.733, 0.2, 0.29, 1.0, 0.189], [0.224, 0.261, 0.162, 0.268, 0.266, 0.189, 1.0]];
 (function(){
   const canvas=document.getElementById('corrChart');
-  if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const n=corrLabels.length;
   function draw(){
@@ -290,17 +269,15 @@ const corrData=[[1.0, 0.869, 0.763, 0.255, 0.336, 0.831, 0.946, 0.224], [0.869, 
   setTimeout(()=>{canvas.width=canvas.parentElement.clientWidth;canvas.height=canvas.parentElement.clientHeight;draw();},100);
 })();
 
-// TEMPORAL
-
 if(document.getElementById('tempUC')){
   new Chart(document.getElementById('tempUC'),{
     type:'line',
     data:{
-      labels:[],
+      labels:["2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3"],
       datasets:[
-        {label:'SEG_A',data:[],borderColor:SEGA,backgroundColor:SEGA+'22',fill:true,tension:.3,borderWidth:2},
-        {label:'SEG_B',data:[],borderColor:SEGB,backgroundColor:SEGB+'22',fill:true,tension:.3,borderWidth:2},
-        {label:'SEG_C',data:[],borderColor:SEGC,backgroundColor:SEGC+'22',fill:true,tension:.3,borderWidth:2}
+        {label:'SEG_A',data:[0.1593, 0.1706, 0.1705, 0.1769, 0.164, 0.1789, 0.1837],borderColor:SEGA,backgroundColor:SEGA+'22',fill:true,tension:.3,borderWidth:2},
+        {label:'SEG_B',data:[0.4835, 0.5239, 0.5176, 0.5365, 0.4949, 0.532, 0.543],borderColor:SEGB,backgroundColor:SEGB+'22',fill:true,tension:.3,borderWidth:2},
+        {label:'SEG_C',data:[0.6721, 0.7221, 0.7147, 0.7412, 0.6775, 0.7234, 0.7359],borderColor:SEGC,backgroundColor:SEGC+'22',fill:true,tension:.3,borderWidth:2}
       ]
     },
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}
@@ -311,37 +288,31 @@ if(document.getElementById('tempB1')){
   new Chart(document.getElementById('tempB1'),{
     type:'line',
     data:{
-      labels:[],
+      labels:["2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3"],
       datasets:[
-        {label:'SEG_A',data:[],borderColor:SEGA,backgroundColor:SEGA+'22',fill:true,tension:.3,borderWidth:2},
-        {label:'SEG_B',data:[],borderColor:SEGB,backgroundColor:SEGB+'22',fill:true,tension:.3,borderWidth:2},
-        {label:'SEG_C',data:[],borderColor:SEGC,backgroundColor:SEGC+'22',fill:true,tension:.3,borderWidth:2}
+        {label:'SEG_A',data:[0.0, 0.0001, 0.0002, 0.0004, 0.0007, 0.0011, 0.0013],borderColor:SEGA,backgroundColor:SEGA+'22',fill:true,tension:.3,borderWidth:2},
+        {label:'SEG_B',data:[0.0002, 0.0006, 0.001, 0.0017, 0.0022, 0.0037, 0.0042],borderColor:SEGB,backgroundColor:SEGB+'22',fill:true,tension:.3,borderWidth:2},
+        {label:'SEG_C',data:[0.0001, 0.0004, 0.0009, 0.0016, 0.0023, 0.0034, 0.0042],borderColor:SEGC,backgroundColor:SEGC+'22',fill:true,tension:.3,borderWidth:2}
       ]
     },
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}
   });
 }
 
-
-// SPARSITY
 const sparData=[{"name": "(2000, 2020]", "pct": 100.0}, {"name": "(2020, 2030]", "pct": 100.0}, {"name": "SPEC_OTHER_SPEC", "pct": 99.0}, {"name": "SPEC_GPFM", "pct": 98.9}, {"name": "N_CLMBRAND1_NEW", "pct": 98.2}, {"name": "SPEC_NRP", "pct": 96.6}, {"name": "SPEC_PHA", "pct": 96.6}, {"name": "STATE_4", "pct": 96.6}, {"name": "STATE_3", "pct": 96.3}, {"name": "STATE_6", "pct": 96.2}, {"name": "COPAY", "pct": 95.5}, {"name": "STATE_7", "pct": 95.5}, {"name": "BRAND1_NBRX", "pct": 95.0}, {"name": "N_CLMBRAND1_NEW_TO_BRAND", "pct": 95.0}, {"name": "BRAND1_NRX", "pct": 94.9}];
 const sparDiv=document.getElementById('sparsityBars');
-if(sparDiv){
-  sparData.forEach(item=>{
-    const color=item.pct>90?'#D0021B':item.pct>75?'#E87722':item.pct>50?'#FFB74D':'#00875A';
-    sparDiv.innerHTML+=`<div class="sparse-row"><div class="sparse-name">${item.name}</div><div class="sparse-bar-bg"><div class="sparse-bar" style="width:${item.pct}%;background:${color}"></div></div><div class="sparse-pct">${item.pct}%</div></div>`;
-  });
-}
+sparData.forEach(item=>{
+  const color=item.pct>90?'#D0021B':item.pct>75?'#E87722':item.pct>50?'#FFB74D':'#00875A';
+  sparDiv.innerHTML+=`<div class="sparse-row"><div class="sparse-name">${item.name}</div><div class="sparse-bar-bg"><div class="sparse-bar" style="width:${item.pct}%;background:${color}"></div></div><div class="sparse-pct">${item.pct}%</div></div>`;
+});
 
-// DESCRIPTIVE
-const descData=[["UC_TRX", 20.98, 7.94, 44.79, 0.0, 1.39, 23.82, 1051.1, 9.7, 7.78], ["ORAL_TRX", 4.25, 0.58, 11.02, 0.0, 0.0, 4.18, 478.8, 41.1, 10.12], ["IL23_TRX", 2.32, 0.0, 9.24, 0.0, 0.0, 1.67, 820.4, 50.8, 37.68], ["BRAND1_TRX", 0.06, 0.0, 0.38, 0.0, 0.0, 0.0, 13.9, 94.7, 11.89], ["BRAND2_TRX", 0.26, 0.0, 1.09, 0.0, 0.0, 0.0, 33.3, 89.2, 7.82], ["N_CLMOTHERS", 37.74, 14.8, 79.55, 0.0, 2.4, 43.2, 2082.4, 11.8, 7.53], ["N_CLMBRAND3", 6.88, 0.4, 20.31, 0.0, 0.0, 6.0, 968.0, 46.5, 12.1], ["DETAILS", 4.84, 1.2, 7.38, 0.0, 0.0, 7.2, 60.0, 40.8, 2.19], ["SAMPLES", 0.17, 0.0, 0.52, 0.0, 0.0, 0.0, 17.0, 82.7, 7.29], ["BRAND1_T_GIDX", 0.02, 0.0, 0.13, -0.0, 0.0, 0.0, 4.1, 92.5, 8.82], ["BRAND2_T_GIDX", 0.06, 0.0, 0.22, -0.7, 0.0, 0.0, 3.3, 86.2, 5.02]];
+// Descriptive
+const descData=[["UC_TRX", 20.98, 7.94, 44.79, 0.0, 1.39, 23.82, 1051.1, 9.7, 7.78], ["ORAL_TRX", 4.25, 0.58, 11.02, 0.0, 0.0, 4.18, 478.8, 41.1, 10.12], ["IL23_TRX", 2.32, 0.0, 9.24, 0.0, 0.0, 1.67, 820.4, 50.8, 37.68], ["BRAND1_TRX", 0.06, 0.0, 0.38, 0.0, 0.0, 0.0, 13.9, 94.7, 11.89], ["BRAND2_TRX", 0.26, 0.0, 1.09, 0.0, 0.0, 0.0, 33.3, 89.2, 7.82], ["N_CLMOTHERS", 37.74, 14.8, 79.55, 0.0, 2.4, 43.2, 2082.4, 11.8, 7.53], ["DETAILS", 4.84, 1.2, 7.38, 0.0, 0.0, 7.2, 60.0, 40.8, 2.19], ["SAMPLES", 0.17, 0.0, 0.52, 0.0, 0.0, 0.0, 17.0, 82.7, 7.29], ["BRAND1_T_GIDX", 0.02, 0.0, 0.13, -0.0, 0.0, 0.0, 4.1, 92.5, 8.82], ["BRAND2_T_GIDX", 0.06, 0.0, 0.22, -0.7, 0.0, 0.0, 3.3, 86.2, 5.02]];
 const tbody=document.getElementById('descTable');
-if(tbody){
-  descData.forEach(([name,mean,med,std,min,q25,q75,max,zeros,skew])=>{
-    const skewColor=skew>5?'var(--pf-red)':skew>2?'var(--pf-orange)':'var(--pf-green)';
-    tbody.innerHTML+=`<tr><td class="col-name">${name}</td><td>${mean.toFixed(2)}</td><td>${med.toFixed(2)}</td><td>${std.toFixed(2)}</td><td>${min.toFixed(1)}</td><td>${q25.toFixed(2)}</td><td>${q75.toFixed(2)}</td><td>${max.toFixed(1)}</td><td>${zeros}%</td><td style="color:${skewColor};font-weight:700">${skew.toFixed(1)}</td></tr>`;
-  });
-}
+descData.forEach(([name,mean,med,std,min,q25,q75,max,zeros,skew])=>{
+  const skewColor=skew>5?'var(--pf-red)':skew>2?'var(--pf-orange)':'var(--pf-green)';
+  tbody.innerHTML+=`<tr><td class="col-name">${name}</td><td>${mean.toFixed(2)}</td><td>${med.toFixed(2)}</td><td>${std.toFixed(2)}</td><td>${min.toFixed(1)}</td><td>${q25.toFixed(2)}</td><td>${q75.toFixed(2)}</td><td>${max.toFixed(1)}</td><td>${zeros}%</td><td style="color:${skewColor};font-weight:700">${skew.toFixed(1)}</td></tr>`;
+});
 </script>
 
 </body>
