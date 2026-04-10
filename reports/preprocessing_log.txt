@@ -1,0 +1,51 @@
+======================================================================
+PFIZER HCP SEGMENTATION - LOG DE PROCESAMIENTO DE DATOS
+======================================================================
+
+Fecha: 2026-04-10 09:01:38
+Archivo de entrada: data/raw/VELSIPITY_AFF_MULTIPLI_prepared_prepared_prepared.csv
+Archivo de salida: data/processed/data_processed.csv
+
+======================================================================
+
+[09:00:34] 📊 Cargando datos raw...
+[09:00:40] ✅ Datos cargados: 1,800,066 filas, 68 columnas
+[09:00:40] 
+🔑 Procesando columnas de identificación...
+[09:00:40]    Columnas de ID encontradas: 2
+[09:00:40]    Estas columnas se mantendrán pero no se usarán para modelado
+[09:00:40] 
+🔍 Manejando valores faltantes...
+[09:00:40]    Valores faltantes antes: 776,752
+[09:00:40]    ✓ ATSEG: Categoría 'Unknown' creada (43.15% faltantes)
+[09:00:41]    Valores faltantes después: 776,752
+[09:00:41]    Reducción: 0 valores imputados
+[09:00:41] 
+🗑️ Eliminando features constantes...
+[09:00:41]    ✓ Eliminadas 2 columnas constantes
+[09:00:41]    Columnas eliminadas: (2000, 2020], (2020, 2030]
+[09:00:41] 
+🔗 Eliminando features con correlación > 0.95...
+[09:00:52]    ✓ Eliminadas 1 columnas altamente correlacionadas
+[09:00:52]    Columnas eliminadas: YEAR_QTR
+[09:00:52] 
+📊 Manejando outliers (método: clip, 3 std)...
+[09:00:55]    ✓ Outliers detectados y tratados: 1,941,689
+[09:00:55] 
+🔧 Creando nuevas features...
+[09:00:55]    ✓ Creada: TOTAL_TRX (suma de 6 columnas)
+[09:00:55]    ✓ Creada: TOTAL_NRX (suma de 5 columnas)
+[09:00:55]    ✓ Creada: ENGAGEMENT_SCORE (suma de 4 columnas)
+[09:00:55]    ✓ Creada: NBRx_RATIO (BRAND1_NBRX / TOTAL_TRX)
+[09:00:55]    ✓ Creada: BRAND1_MARKET_SHARE
+[09:00:55] 
+📏 Normalizando features (método: robust)...
+[09:00:58]    ✓ Normalizadas 67 columnas
+[09:00:58] 
+💾 Guardando datos procesados...
+[09:01:38]    ✓ Datos guardados en: data/processed/data_processed.csv
+[09:01:38]    Dimensiones finales: 1,800,066 filas, 70 columnas
+
+======================================================================
+PROCESAMIENTO COMPLETADO
+======================================================================
