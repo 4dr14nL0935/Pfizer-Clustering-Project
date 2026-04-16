@@ -1,3 +1,9 @@
 claude.md
 *.csv
 .claude/
+*.png
+*.npz
+*.sqlite
+*.db
+*.json
+
