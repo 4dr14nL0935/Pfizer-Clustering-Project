@@ -6,4 +6,5 @@ claude.md
 *.sqlite
 *.db
 *.json
-
+*.txt
+*.py
