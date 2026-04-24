@@ -1,0 +1,83 @@
+================================================================================
+REPORTE FINAL - MODELO DE SEGMENTACIÓN HCP
+================================================================================
+
+Fecha: 2026-04-20 18:57:29
+Modelo: XGBoost Classifier
+Dataset: 143 features
+
+================================================================================
+DECISIONES DE DISEÑO
+================================================================================
+
+✓ Incluye TODOS los doctores (11,899)
+✓ NO incluye edad como feature (experimentos mostraron que no ayuda)
+✓ Sample weights aplicados (SEG_A: 1.0x, SEG_B: 1.5x, SEG_C: 2.5x)
+✓ Hiperparámetros optimizados via GridSearch
+
+================================================================================
+RESULTADOS - TRAIN
+================================================================================
+
+Overall Accuracy:   72.24%
+Balanced Accuracy:  68.57%
+Cohen's Kappa:      0.540
+F1-Score (Macro):   0.679
+F1-Score (Weighted):0.724
+
+Por segmento:
+  SEG_A: 81.11% (4157/5125)
+  SEG_B: 60.51% (1621/2679)
+  SEG_C: 64.08% (1099/1715)
+
+================================================================================
+RESULTADOS - TEST
+================================================================================
+
+Overall Accuracy:   65.42%
+Balanced Accuracy:  59.25%
+Cohen's Kappa:      0.424
+F1-Score (Macro):   0.589
+F1-Score (Weighted):0.655
+
+Por segmento:
+  SEG_A: 79.31% (1016/1281)
+  SEG_B: 49.25% (330/670)
+  SEG_C: 49.18% (211/429)
+
+================================================================================
+TOP 20 FEATURES
+================================================================================
+
+ 1. ORAL_TRX_sum                                       0.0656
+ 2. ORAL_TRX_mean                                      0.0565
+ 3. N_CLMOTHERS_mean                                   0.0303
+ 4. N_CLMOTHERS_sum                                    0.0300
+ 5. TOTAL_TRX_sum                                      0.0220
+ 6. UC_TRX_sum                                         0.0218
+ 7. ORAL_TRX_max                                       0.0212
+ 8. N_CLMOTHERS_max                                    0.0180
+ 9. N_CLMBRAND3_sum                                    0.0157
+10. IL23_TRX_mean                                      0.0138
+11. IL23_TRX_sum                                       0.0133
+12. N_CLMBRAND3_max                                    0.0130
+13. ORAL_NBRX_max                                      0.0126
+14. IL23_TRX_max                                       0.0116
+15. N_CLMBRAND3_mean                                   0.0113
+16. STATE_4_first                                      0.0107
+17. TOTAL_TRX_mean                                     0.0106
+18. ORAL_NRX_sum                                       0.0102
+19. UC_TRX_mean                                        0.0095
+20. N_CLMOTHERS_NEW_TO_BRAND_max                       0.0092
+
+================================================================================
+ARCHIVOS GENERADOS
+================================================================================
+
+✓ models/best_model_20260420_185726.pkl
+✓ results/feature_importance.csv
+✓ results/01_confusion_matrices.png
+✓ results/02_segment_accuracy.png
+✓ results/03_feature_importance.png
+✓ results/04_balanced_accuracy.png
+✓ results/REPORTE_MODELO_FINAL_20260420_185726.txt
