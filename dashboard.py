@@ -247,6 +247,15 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(0,112,191,0.1);
         border-color: rgba(0,112,191,0.25);
     }
+    .kpi-card.compact {
+        height: 170px !important;
+        padding: 16px 20px 14px 20px;
+    }
+    .kpi-card.compact .kpi-value { font-size: 32px; }
+    .kpi-card.compact .kpi-icon { width: 40px; height: 40px; font-size: 18px; top: 16px; right: 16px; }
+    .kpi-card.compact .kpi-label { font-size: 12px; margin-bottom: 6px; }
+    .kpi-card.compact .kpi-delta { font-size: 13px; margin-top: 4px; }
+    .kpi-card.compact .kpi-status { margin-top: 8px; padding: 4px 12px; font-size: 11px; }
     .kpi-icon {
         position: absolute; top: 22px; right: 22px;
         width: 50px; height: 50px; border-radius: 12px;
@@ -1762,16 +1771,16 @@ if True:
         cols = st.columns(3)
         kpi_card(cols[0], "With ATSEG", f"{with_atseg:,}",
                  helper=f"{coverage:.1f}% coverage",
-                 style="good", icon="✓",
+                 style="good compact", icon="✓",
                  status="ok", status_label="Labeled")
         kpi_card(cols[1], "SEG_C HCPs",
                  f"{cnt_c:,}",
                  helper="High-value targets",
-                 style="danger", icon="🎯",
+                 style="danger compact", icon="🎯",
                  status="info", status_label="Priority")
         kpi_card(cols[2], "Unlabeled", f"{no_atseg:,}",
                  helper=f"{100-coverage:.1f}% to score",
-                 style="warn", icon="❓",
+                 style="warn compact", icon="❓",
                  status="info", status_label="Scored")
 
         st.markdown("&nbsp;")
