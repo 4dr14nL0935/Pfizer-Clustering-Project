@@ -1759,20 +1759,17 @@ if True:
         cnt_b = (R["y_true"] == "SEG_B").sum()
         cnt_c = (R["y_true"] == "SEG_C").sum()
 
-        cols = st.columns(4)
-        kpi_card(cols[0], "Total HCPs", f"{len(R['ids']):,}",
-                 helper="In dataset", style="neutral", icon="👥",
-                 status="info", status_label="Loaded")
-        kpi_card(cols[1], "With ATSEG", f"{with_atseg:,}",
+        cols = st.columns(3)
+        kpi_card(cols[0], "With ATSEG", f"{with_atseg:,}",
                  helper=f"{coverage:.1f}% coverage",
                  style="good", icon="✓",
                  status="ok", status_label="Labeled")
-        kpi_card(cols[2], "SEG_C HCPs",
+        kpi_card(cols[1], "SEG_C HCPs",
                  f"{cnt_c:,}",
                  helper="High-value targets",
                  style="danger", icon="🎯",
                  status="info", status_label="Priority")
-        kpi_card(cols[3], "Unlabeled", f"{no_atseg:,}",
+        kpi_card(cols[2], "Unlabeled", f"{no_atseg:,}",
                  helper=f"{100-coverage:.1f}% to score",
                  style="warn", icon="❓",
                  status="info", status_label="Scored")
