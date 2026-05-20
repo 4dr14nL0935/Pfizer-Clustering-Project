@@ -1811,34 +1811,6 @@ if True:
         # ── Overview info cards (Dataset + Model) ──
         ov_left, ov_right = st.columns(2)
         with ov_left:
-            st.markdown(f"""
-            <div class="overview-card dataset">
-                <div class="overview-card-header">
-                    <div class="overview-card-icon">🗄️</div>
-                    <div>
-                        <div class="overview-card-title">Dataset Overview</div>
-                        <div class="overview-card-subtitle">Data pipeline summary</div>
-                    </div>
-                </div>
-                <div class="overview-card-body">
-                    <p>The dataset is built from <span class="highlight">weekly HCP-level records</span>
-                    aggregated into one row per physician. Features include prescription volumes
-                    (TRx, NRx), sales rep engagement (details, samples), competitor therapies
-                    (IL-23, oral), and specialty/state demographics.</p>
-                    <p>Pipeline steps: <span class="highlight">Aggregate</span> weekly → per-HCP ·
-                    <span class="highlight">Engineer</span> ratios, R4 sums, engagement score ·
-                    <span class="highlight">Encode</span> one-hot SPEC, STATE, age ·
-                    <span class="highlight">Label &amp; clean</span> join ATSEG, impute nulls.</p>
-                    <div>
-                        <span class="overview-tag"><b>{len(R['ids']):,}</b> HCPs</span>
-                        <span class="overview-tag"><b>{R['n_labeled']:,}</b> labeled</span>
-                        <span class="overview-tag"><b>{R['n_unlabeled']:,}</b> unlabeled</span>
-                        <span class="overview-tag"><b>{len(R['feature_names'])}</b> features</span>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        with ov_right:
             st.markdown("""
             <div class="overview-card model">
                 <div class="overview-card-header">
@@ -1863,6 +1835,34 @@ if True:
                     transparent feature-level insights and a
                     <span class="highlight">conversion analysis module</span> to identify SEG_B
                     physicians with strong potential to transition into SEG_C.</p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        with ov_right:
+            st.markdown(f"""
+            <div class="overview-card dataset">
+                <div class="overview-card-header">
+                    <div class="overview-card-icon">🗄️</div>
+                    <div>
+                        <div class="overview-card-title">Dataset Overview</div>
+                        <div class="overview-card-subtitle">Data pipeline summary</div>
+                    </div>
+                </div>
+                <div class="overview-card-body">
+                    <p>The dataset is built from <span class="highlight">weekly HCP-level records</span>
+                    aggregated into one row per physician. Features include prescription volumes
+                    (TRx, NRx), sales rep engagement (details, samples), competitor therapies
+                    (IL-23, oral), and specialty/state demographics.</p>
+                    <p>Pipeline steps: <span class="highlight">Aggregate</span> weekly → per-HCP ·
+                    <span class="highlight">Engineer</span> ratios, R4 sums, engagement score ·
+                    <span class="highlight">Encode</span> one-hot SPEC, STATE, age ·
+                    <span class="highlight">Label &amp; clean</span> join ATSEG, impute nulls.</p>
+                    <div>
+                        <span class="overview-tag"><b>{len(R['ids']):,}</b> HCPs</span>
+                        <span class="overview-tag"><b>{R['n_labeled']:,}</b> labeled</span>
+                        <span class="overview-tag"><b>{R['n_unlabeled']:,}</b> unlabeled</span>
+                        <span class="overview-tag"><b>{len(R['feat_cols'])}</b> features</span>
+                    </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
