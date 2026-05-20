@@ -1512,15 +1512,7 @@ st.sidebar.markdown(
     unsafe_allow_html=True,
 )
 
-sb_label("👁", "View Mode", color="purple")
-mode = st.sidebar.radio(
-    "Mode",
-    ["Single model", "Compare models"],
-    label_visibility="collapsed",
-    horizontal=True,
-)
 
-sb_divider()
 
 # Dataset (hard-coded)
 dataset = DATASET_NAME
