@@ -790,76 +790,7 @@ st.markdown(
         font-size: 12px;
     }
 
-    /* ── OVERVIEW INFO CARDS ── */
-    .overview-cards {
-        display: flex; gap: 16px; margin-bottom: 24px;
-    }
-    .overview-card {
-        flex: 1; position: relative;
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 14px;
-        padding: 22px 24px;
-        box-shadow: 0 2px 8px rgba(0,40,100,0.05);
-        transition: all 0.25s ease;
-        overflow: hidden;
-    }
-    .overview-card::before {
-        content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    }
-    .overview-card.dataset::before {
-        background: linear-gradient(90deg, #0058A3, #0088E0, #00D4FF);
-    }
-    .overview-card.model::before {
-        background: linear-gradient(90deg, #6D28D9, #8B5CF6, #A78BFA);
-    }
-    .overview-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0,112,191,0.08);
-    }
-    .overview-card-header {
-        display: flex; align-items: center; gap: 12px;
-        margin-bottom: 14px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #F1F5F9;
-    }
-    .overview-card-icon {
-        width: 42px; height: 42px; border-radius: 10px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 20px; flex-shrink: 0;
-    }
-    .overview-card.dataset .overview-card-icon {
-        background: #F0F7FF; color: #0070BF; border: 1px solid #DBEAFE;
-    }
-    .overview-card.model .overview-card-icon {
-        background: #F5F3FF; color: #7C3AED; border: 1px solid #DDD6FE;
-    }
-    .overview-card-title {
-        font-size: 15px; font-weight: 700; color: #0F172A;
-        letter-spacing: -0.2px;
-    }
-    .overview-card-subtitle {
-        font-size: 11px; color: #64748B; font-weight: 500;
-        text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;
-    }
-    .overview-card-body {
-        font-size: 13px; color: #475569; line-height: 1.65;
-    }
-    .overview-card-body p {
-        margin: 0 0 10px 0; font-size: 13px !important;
-    }
-    .overview-card-body p:last-child { margin-bottom: 0; }
-    .overview-card-body .highlight {
-        color: #0F172A; font-weight: 600;
-    }
-    .overview-tag {
-        display: inline-flex; align-items: center; gap: 5px;
-        background: #F8FAFC; border: 1px solid #E2E8F0;
-        padding: 4px 10px; border-radius: 6px;
-        font-size: 11px; color: #475569; font-weight: 500;
-        margin-right: 6px; margin-top: 6px;
-    }
-    .overview-tag b { color: #0F172A; font-weight: 700; }
+
 
     /* Streamlit native expander tweak (used both in main and sidebar) */
     [data-testid="stExpander"] {
@@ -1808,64 +1739,7 @@ if True:
                 "Model performance metrics and HCP distribution across segments",
                 icon="🔍")
 
-        # ── Overview info cards (Dataset + Model) ──
-        ov_left, ov_right = st.columns(2)
-        with ov_left:
-            st.markdown("""
-            <div class="overview-card model">
-                <div class="overview-card-header">
-                    <div class="overview-card-icon">🧠</div>
-                    <div>
-                        <div class="overview-card-title">Model Overview</div>
-                        <div class="overview-card-subtitle">Ordinal XGBoost v3.2</div>
-                    </div>
-                </div>
-                <div class="overview-card-body">
-                    <p>The final model is an <span class="highlight">ordinal XGBoost framework</span>
-                    that segments HCPs into SEG_A, SEG_B, and SEG_C based on their likelihood of
-                    prescribing Velsipity. Instead of a traditional multiclass classifier, the system
-                    models the problem through <span class="highlight">two sequential binary XGBoost
-                    models</span>, capturing the natural progression between segments.</p>
-                    <p>Features include prescription activity, rep interactions, sample distribution,
-                    competitor Rx, ratio-based metrics, and log transforms.
-                    <span class="highlight">Custom business-calibrated thresholds</span> and a
-                    dominance rule prioritize high-value prescriber identification while minimizing
-                    costly false negatives.</p>
-                    <p>The system integrates <span class="highlight">SHAP explainability</span> for
-                    transparent feature-level insights and a
-                    <span class="highlight">conversion analysis module</span> to identify SEG_B
-                    physicians with strong potential to transition into SEG_C.</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        with ov_right:
-            st.markdown(f"""
-            <div class="overview-card dataset">
-                <div class="overview-card-header">
-                    <div class="overview-card-icon">🗄️</div>
-                    <div>
-                        <div class="overview-card-title">Dataset Overview</div>
-                        <div class="overview-card-subtitle">Data pipeline summary</div>
-                    </div>
-                </div>
-                <div class="overview-card-body">
-                    <p>The dataset is built from <span class="highlight">weekly HCP-level records</span>
-                    aggregated into one row per physician. Features include prescription volumes
-                    (TRx, NRx), sales rep engagement (details, samples), competitor therapies
-                    (IL-23, oral), and specialty/state demographics.</p>
-                    <p>Pipeline steps: <span class="highlight">Aggregate</span> weekly → per-HCP ·
-                    <span class="highlight">Engineer</span> ratios, R4 sums, engagement score ·
-                    <span class="highlight">Encode</span> one-hot SPEC, STATE, age ·
-                    <span class="highlight">Label &amp; clean</span> join ATSEG, impute nulls.</p>
-                    <div>
-                        <span class="overview-tag"><b>{len(R['ids']):,}</b> HCPs</span>
-                        <span class="overview-tag"><b>{R['n_labeled']:,}</b> labeled</span>
-                        <span class="overview-tag"><b>{R['n_unlabeled']:,}</b> unlabeled</span>
-                        <span class="overview-tag"><b>{len(R['feat_cols'])}</b> features</span>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+
 
         # ── Row 1: Model performance KPIs ──
         cols = st.columns(5)
