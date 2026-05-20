@@ -1724,11 +1724,11 @@ if True:
 
     # ── Data Overview ──
     with tabs[0]:
-        # ── Model Performance Summary KPIs ──
-        section("Model Performance Summary",
-                "Key metrics from the selected prediction model",
-                icon="📊")
+        section("ATSEG Segmentation Overview",
+                "Model performance metrics and HCP distribution across segments",
+                icon="🔍")
 
+        # ── Row 1: Model performance KPIs ──
         cols = st.columns(5)
         kpi_card(cols[0], "HCPs Analyzed", f"{len(R['ids']):,}",
                  helper=f"{R['n_labeled']:,} labeled · {R['n_unlabeled']:,} unlabeled",
@@ -1751,14 +1751,7 @@ if True:
                  style="danger", icon="⚠",
                  status=closs_s, status_label=closs_l)
 
-        st.markdown("&nbsp;")
-
-        # ── ATSEG Segmentation Overview ──
-        section("ATSEG Segmentation Overview",
-                "Distribution of HCPs across the existing ATSEG segmentation",
-                icon="🔍")
-
-        # KPIs
+        # ── Row 2: Data distribution KPIs ──
         with_atseg = R["n_labeled"]
         no_atseg = R["n_unlabeled"]
         coverage = with_atseg / (with_atseg + no_atseg) * 100
