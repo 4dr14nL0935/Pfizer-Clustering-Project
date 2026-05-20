@@ -1707,32 +1707,11 @@ context_strip(context_items, accent_index=0)
 if True:
     m = R["metrics"][model_pick]
 
-    # KPI strip
+    # KPI status helpers (used inside Data Overview)
     acc_s, acc_l = accuracy_status(m["accuracy"])
     rec_s, rec_l = recall_c_status(m["recall_C"])
     closs_s, closs_l = c_loss_status(m["c_lost_pct"])
 
-    cols = st.columns(5)
-    kpi_card(cols[0], "HCPs Analyzed", f"{len(R['ids']):,}",
-             helper=f"{R['n_labeled']:,} labeled · {R['n_unlabeled']:,} unlabeled",
-             style="neutral", icon="👥",
-             status="info", status_label="Loaded")
-    kpi_card(cols[1], "Accuracy", f"{m['accuracy']*100:.1f}%",
-             helper="Overall correctness",
-             style="good", icon="🎯",
-             status=acc_s, status_label=acc_l)
-    kpi_card(cols[2], "Balanced Accuracy", f"{m['balanced_accuracy']*100:.1f}%",
-             helper="Class-balanced score",
-             style="accent", icon="⚖",
-             status=acc_s, status_label=acc_l)
-    kpi_card(cols[3], "Recall (SEG_C)", f"{m['recall_C']*100:.1f}%",
-             helper="C captured by the model",
-             style="warn", icon="🔬",
-             status=rec_s, status_label=rec_l)
-    kpi_card(cols[4], "SEG_C → SEG_A Loss", f"{m['c_lost_pct']*100:.1f}%",
-             helper="Catastrophic mis-classifications",
-             style="danger", icon="⚠",
-             status=closs_s, status_label=closs_l)
 
     tabs = st.tabs([
         "🔍  Data Overview",
@@ -1745,6 +1724,36 @@ if True:
 
     # ── Data Overview ──
     with tabs[0]:
+        # ── Model Performance Summary KPIs ──
+        section("Model Performance Summary",
+                "Key metrics from the selected prediction model",
+                icon="📊")
+
+        cols = st.columns(5)
+        kpi_card(cols[0], "HCPs Analyzed", f"{len(R['ids']):,}",
+                 helper=f"{R['n_labeled']:,} labeled · {R['n_unlabeled']:,} unlabeled",
+                 style="neutral", icon="👥",
+                 status="info", status_label="Loaded")
+        kpi_card(cols[1], "Accuracy", f"{m['accuracy']*100:.1f}%",
+                 helper="Overall correctness",
+                 style="good", icon="🎯",
+                 status=acc_s, status_label=acc_l)
+        kpi_card(cols[2], "Balanced Accuracy", f"{m['balanced_accuracy']*100:.1f}%",
+                 helper="Class-balanced score",
+                 style="accent", icon="⚖",
+                 status=acc_s, status_label=acc_l)
+        kpi_card(cols[3], "Recall (SEG_C)", f"{m['recall_C']*100:.1f}%",
+                 helper="C captured by the model",
+                 style="warn", icon="🔬",
+                 status=rec_s, status_label=rec_l)
+        kpi_card(cols[4], "SEG_C → SEG_A Loss", f"{m['c_lost_pct']*100:.1f}%",
+                 helper="Catastrophic mis-classifications",
+                 style="danger", icon="⚠",
+                 status=closs_s, status_label=closs_l)
+
+        st.markdown("&nbsp;")
+
+        # ── ATSEG Segmentation Overview ──
         section("ATSEG Segmentation Overview",
                 "Distribution of HCPs across the existing ATSEG segmentation",
                 icon="🔍")
