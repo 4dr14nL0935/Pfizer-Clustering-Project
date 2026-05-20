@@ -1739,7 +1739,6 @@ if True:
         "📈  Model Performance",
         "🌐  Probability Map",
         "🔬  Doctor Explorer",
-        "🚨  Ambiguous HCPs",
         "🎯  Conversion Strategy",
         "📋  Predictions Table",
     ])
@@ -2752,123 +2751,8 @@ if True:
                 unsafe_allow_html=True,
             )
 
-    # ── Ambiguous HCPs ──
-    with tabs[4]:
-        section("Ambiguous HCPs",
-                "HCPs where the model is uncertain — max probability below threshold",
-                icon="🚨")
-
-        col_thr, col_info = st.columns([3, 2])
-        with col_thr:
-            thr = st.slider("Max-probability threshold", 0.30, 0.80, 0.50, 0.05,
-                             help="HCPs whose top class probability is below this threshold are flagged")
-
-        pa = R["full"][model_pick]["P_A"]
-        pb = R["full"][model_pick]["P_B"]
-        pc = R["full"][model_pick]["P_C"]
-        max_p = np.maximum.reduce([pa, pb, pc])
-        amb_mask = max_p < thr
-
-        with col_info:
-            count_amb = int(amb_mask.sum())
-            pct_amb = count_amb / max(len(R["ids"]), 1) * 100
-            st.markdown(
-                f"<div style='font-size:11px;color:#64748B;padding:14px 6px;text-align:right;'>"
-                f"<b style='color:#BE123C;font-size:14px;'>{count_amb:,}</b> flagged · "
-                f"<b style='color:#0F172A;'>{pct_amb:.1f}%</b> of population</div>",
-                unsafe_allow_html=True,
-            )
-
-        amb_df = pd.DataFrame({
-            "HCP_ID": R["ids"][amb_mask],
-            "True ATSEG": np.where(R["is_labeled"][amb_mask],
-                                     R["y_true"][amb_mask], "Unlabeled"),
-            "Predicted": R["full"][model_pick]["pred"][amb_mask],
-            "P(A)": pa[amb_mask],
-            "P(B)": pb[amb_mask],
-            "P(C)": pc[amb_mask],
-            "Max P": max_p[amb_mask],
-        }).sort_values("Max P").reset_index(drop=True)
-
-        kcols = st.columns(4)
-        kpi_card(kcols[0], "Ambiguous HCPs", f"{len(amb_df):,}",
-                 helper=f"max P < {thr:.2f}",
-                 style="warn", icon="🚨",
-                 status="fair" if len(amb_df) > 0 else "ok",
-                 status_label="Review")
-        kpi_card(kcols[1], "% of population",
-                 f"{pct_amb:.1f}%",
-                 helper="Need manual review",
-                 style="neutral", icon="📊",
-                 status="info", status_label="Coverage")
-        kpi_card(kcols[2], "Mean Max P",
-                 f"{amb_df['Max P'].mean():.3f}" if len(amb_df) > 0 else "n/a",
-                 helper="Avg confidence across flagged",
-                 style="accent", icon="📐",
-                 status="info", status_label="Confidence")
-        # Most common predicted segment within ambiguous
-        if len(amb_df) > 0:
-            top_pred = amb_df["Predicted"].value_counts().idxmax()
-            top_pred_pct = amb_df["Predicted"].value_counts().iloc[0] / len(amb_df) * 100
-        else:
-            top_pred, top_pred_pct = "—", 0
-        kpi_card(kcols[3], "Top Predicted Segment", top_pred,
-                 helper=f"{top_pred_pct:.0f}% of ambiguous",
-                 style="good", icon="🎯",
-                 status="info", status_label="Trend")
-
-        if len(amb_df) > 0:
-            st.markdown(
-                """
-                <div class="info-panel">
-                    <div class="info-panel-icon">💡</div>
-                    <div class="info-panel-content">
-                        These HCPs are <b>candidates for human review</b>.
-                        The model is split between two or more segments
-                        — confirming them manually can prevent costly mis-classifications.
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            st.dataframe(
-                amb_df.round(3), use_container_width=True,
-                hide_index=True, height=480,
-                column_config={
-                    "P(A)": st.column_config.ProgressColumn(
-                        "P(A)", format="%.2f", min_value=0, max_value=1),
-                    "P(B)": st.column_config.ProgressColumn(
-                        "P(B)", format="%.2f", min_value=0, max_value=1),
-                    "P(C)": st.column_config.ProgressColumn(
-                        "P(C)", format="%.2f", min_value=0, max_value=1),
-                    "Max P": st.column_config.ProgressColumn(
-                        "Max P", format="%.3f", min_value=0, max_value=1),
-                },
-            )
-
-            csv_amb = amb_df.round(3).to_csv(index=False).encode("utf-8")
-            st.download_button("⬇  Download ambiguous HCPs (CSV)",
-                                data=csv_amb,
-                                file_name=f"ambiguous_hcps_{model_pick}.csv",
-                                mime="text/csv")
-        else:
-            st.markdown(
-                """
-                <div class="empty-state">
-                    <div class="empty-state-icon">✅</div>
-                    <div class="empty-state-title">No ambiguous HCPs</div>
-                    <div class="empty-state-text">
-                        At this threshold, every HCP has a confident prediction.
-                        Try lowering the threshold to see borderline cases.
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
     # ── Conversion Strategy (B → C) ──
-    with tabs[5]:
+    with tabs[4]:
         section("Conversion Strategy — B to C movement plan",
                 "Predicted SEG_B doctors closest to SEG_C, plus the engagement "
                 "gaps holding them back",
@@ -2980,7 +2864,7 @@ if True:
             st.info("No SEG_B candidates available.")
 
     # ── Predictions Table ──
-    with tabs[6]:
+    with tabs[5]:
         section("Full Predictions Table",
                 "All HCPs with both models' probabilities and predictions — filter & export",
                 icon="📋")
