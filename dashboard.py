@@ -1639,15 +1639,7 @@ st.sidebar.markdown(
 
 sb_divider()
 
-# Active configuration summary
-st.sidebar.markdown(
-    "<div style='font-size:10px;color:#64748B;margin:14px 0 4px 4px;"
-    "font-weight:700;letter-spacing:.7px;text-transform:uppercase;'>"
-    "Active Configuration</div>",
-    unsafe_allow_html=True,
-)
-sb_current("Dataset", "doctors_aggregated.csv")
-sb_current("Model",   "Ordinal v3.2")
+
 
 st.sidebar.markdown(
     f"""
