@@ -1636,6 +1636,22 @@ st.sidebar.markdown(
     '</div>',
     unsafe_allow_html=True,
 )
+_model_tooltip_html = (
+    f'<div class="sb-ds-tooltip">'
+    f'<div class="ds-tooltip-title">Ordinal XGBoost Framework</div>'
+    f'<div class="ds-step-text" style="margin-bottom: 10px;">The final model is an <b>ordinal XGBoost framework</b> designed to segment healthcare providers into three categories based on their likelihood of prescribing Velsipity: SEG_A, SEG_B, and SEG_C. Instead of using a traditional multiclass classifier, the system models the problem as an ordered classification task through <b>two sequential binary XGBoost models</b>, allowing it to better capture the natural progression between physician segments.</div>'
+    f'<div class="ds-step-text" style="margin-bottom: 10px;">The model incorporates extensive feature engineering, including prescription activity, sales representative interactions, drug sample distribution, competitor prescriptions, ratio-based metrics, and logarithmic transformations to improve predictive performance and robustness.</div>'
+    f'<div class="ds-step-text" style="margin-bottom: 10px;">To align the predictions with Pfizer’s commercial objectives, the model applies <b>custom business-calibrated thresholds</b> and a dominance rule that prioritizes the identification of high-value prescribers while minimizing costly false negatives.</div>'
+    f'<div class="ds-step-text">The final system also integrates <b>SHAP explainability</b> to provide transparent feature-level insights for each prediction and includes a <b>conversion analysis module</b> capable of identifying SEG_B physicians with strong potential to transition into SEG_C. Overall, the model functions not only as a predictive tool, but also as a strategic decision-support system for physician targeting and resource optimization.</div>'
+    f'</div>'
+)
+_model_meta_html = (
+    f'<div class="sb-ds-meta-row">'
+    f'<span class="sb-ds-meta-text">Business Calibrated · SHAP</span>'
+    f'<div class="sb-ds-info">+{_model_tooltip_html}</div>'
+    f'</div>'
+)
+st.sidebar.markdown(_model_meta_html, unsafe_allow_html=True)
 
 sb_divider()
 
