@@ -17,6 +17,8 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+from PIL import Image
+import base64
 
 import xgboost as xgb
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix
@@ -96,9 +98,10 @@ DATA_PREP_STEPS = [
 # ─────────────────────────────────────────────────────────────────────────
 # Page configuration
 # ─────────────────────────────────────────────────────────────────────────
+logo_pfizer = Image.open("logo2.png")
 st.set_page_config(
     page_title="Pfizer HCP Segmentation",
-    page_icon="💊",
+    page_icon=logo_pfizer,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -1497,11 +1500,21 @@ MODEL_LABELS_SHORT = {"ord": "Ordinal", "amx": "Argmax"}
 # ─────────────────────────────────────────────────────────────────────────
 # Sidebar
 # ─────────────────────────────────────────────────────────────────────────
+def get_image_base64(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+# 2. Convierte tu archivo local (asegúrate de que la ruta sea correcta)
+img_base64 = get_image_base64("logo3.png") 
+
+# 3. Lo inyectas en el HTML usando f-strings
 st.sidebar.markdown(
-    """
+    f"""
     <div class="sb-brand">
         <div class="sb-brand-row">
-            <div class="sb-brand-logo">💊</div>
+            <div class="sb-brand-logo">
+                <img src="data:image/png;base64,{img_base64}" width="40" style="vertical-align: middle;">
+            </div>
             <div class="sb-brand-text">
                 <div class="sb-brand-title">PFIZER</div>
                 <div class="sb-brand-sub">HCP Segmentation</div>
@@ -1511,7 +1524,6 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True,
 )
-
 
 
 # Dataset (hard-coded)
@@ -1845,6 +1857,7 @@ if True:
             feat_pick = st.selectbox("Feature to inspect", feat_options,
                                       key="explore_feat")
 
+            # --- VISTA 1: ORIGINAL (CON UNLABELED) ---
             df_dist = R["df"][[feat_pick, "ATSEG_first"]].copy()
             df_dist["ATSEG_first"] = df_dist["ATSEG_first"].fillna("Unlabeled").replace("Unlabeled", "Unlab.")
 
@@ -1885,6 +1898,7 @@ if True:
                                   yaxis=dict(tickfont=dict(size=13),
                                              title=dict(font=dict(size=14))))
                 st.plotly_chart(fig, use_container_width=True)
+
 
     # ── Model Performance (confusion matrix + bars) ──
     with tabs[1]:
@@ -1950,7 +1964,7 @@ if True:
         fig.update_layout(yaxis_tickformat=".0%", yaxis_title="", xaxis_title="")
         st.plotly_chart(fig, use_container_width=True)
 
-    # ── Probability Map (3D) ──
+# ── Probability Map (3D) ──
     with tabs[2]:
         section("Probability Map",
                 f"Each HCP plotted by ({MODEL_LABELS_SHORT[model_pick]}) "
@@ -1970,8 +1984,9 @@ if True:
         # Controls row: color toggle + search input
         col_clr, col_search = st.columns([2, 3])
         with col_clr:
+            # 🔥 CORRECCIÓN: Añadimos la opción filtrada en el componente de Radio
             color_by = st.radio("Color points by",
-                                 ["Predicted Segment", "True ATSEG"],
+                                 ["Predicted Segment", "True ATSEG", "True Segment (Labeled Only)"],
                                  horizontal=True, key="map_color_by")
         with col_search:
             highlight_q = st.text_input(
@@ -1980,25 +1995,24 @@ if True:
                 key="map_highlight_id",
                 label_visibility="collapsed",
             )
-        color_col = "Predicted" if color_by == "Predicted Segment" else "True ATSEG"
+        
+        # 🔥 CORRECCIÓN: Si eligen filtrar, removemos los Unlabeled antes de graficar todo el mapa
+        if color_by == "True Segment (Labeled Only)":
+            df_full_map = df_full_map[df_full_map["True ATSEG"] != "Unlabeled"].reset_index(drop=True)
+            color_col = "True ATSEG"
+        else:
+            color_col = "Predicted" if color_by == "Predicted Segment" else "True ATSEG"
 
         # Resolve highlight
         highlight_row = None
         if highlight_q.strip():
-            matches = np.where(R["ids"] == highlight_q.strip())[0]
+            # Buscamos el ID en el dataframe actual disponible
+            matches = df_full_map[df_full_map["HCP_ID"] == highlight_q.strip()]
             if len(matches) == 0:
-                st.warning(f"No HCP found with ID `{highlight_q.strip()}`.")
+                st.warning(f"No HCP found with ID `{highlight_q.strip()}` en esta vista.")
             else:
-                hi_idx = matches[0]
-                highlight_row = {
-                    "HCP_ID": R["ids"][hi_idx],
-                    "P(A)": float(R["full"][model_pick]["P_A"][hi_idx]),
-                    "P(B)": float(R["full"][model_pick]["P_B"][hi_idx]),
-                    "P(C)": float(R["full"][model_pick]["P_C"][hi_idx]),
-                    "Predicted": str(R["full"][model_pick]["pred"][hi_idx]),
-                    "True ATSEG": (R["y_true"][hi_idx]
-                                    if R["is_labeled"][hi_idx] else "Unlabeled"),
-                }
+                # Extraemos la fila directamente como un diccionario
+                highlight_row = matches.iloc[0].to_dict()
 
         # Subsample background points for performance, always keep highlight
         N_MAX = 5000
@@ -2030,7 +2044,6 @@ if True:
                 customdata=df_bg[["HCP_ID", "Predicted", "True ATSEG"]].values,
                 showlegend=True,
             ))
-
             # Highlighted HCP keeps its segment color and looks like a normal
             # point — the "hover" tooltip is drawn as a scene annotation.
             hi_seg = (highlight_row[color_col]
