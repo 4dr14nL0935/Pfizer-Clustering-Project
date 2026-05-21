@@ -940,6 +940,31 @@ st.markdown(
         transform: translateY(-50%);
     }
 
+    /* ────────────────────────────────────────────────────────────
+       Effective 90% zoom on the MAIN content area only.
+       The dashboard was designed at 90% browser zoom — this CSS
+       reproduces those proportions at 100% so users don't have to
+       remember to zoom out manually.
+
+       Notes:
+         · `zoom: 0.9` is supported by Chromium, Safari, and modern
+           Firefox; degrades gracefully on older browsers.
+         · We bump `max-width` so the horizontal space freed by the
+           scale is consumed by the content instead of leaving a wide
+           empty margin.
+         · The sidebar is NOT scaled — it already feels right at full
+           size, and shrinking it would crowd the controls.
+    ──────────────────────────────────────────────────────────── */
+    section[data-testid="stMain"] .block-container {
+        zoom: 0.9;
+        max-width: 1600px;
+    }
+    /* Streamlit dialog modal renders outside .main — scale it too so
+       the popup proportions match the rest of the UI. */
+    [data-testid="stDialog"], [role="dialog"] {
+        zoom: 0.9;
+    }
+
     /* Hide streamlit chrome */
     #MainMenu, footer { visibility: hidden; }
     header[data-testid="stHeader"] {
@@ -2129,6 +2154,151 @@ if True:
         _style_fig(fig, height=360, title="Precision & Recall per Segment")
         fig.update_layout(yaxis_tickformat=".0%", yaxis_title="", xaxis_title="")
         st.plotly_chart(fig, use_container_width=True)
+
+        # ── Population-level Confidence Intervals (5-fold CV) ──
+        section("Prediction confidence intervals (95% CI)",
+                "Width = upper bound − lower bound across 5 CV folds for each "
+                "labeled HCP. Narrow bands ⇒ stable predictions; wide bands "
+                "⇒ noisy predictions worth manual review.",
+                icon="📐")
+
+        # CI bounds are only meaningful for labeled HCPs (computed from CV folds)
+        lab_mask = R["is_labeled"]
+        if lab_mask.sum() > 0:
+            ci_lo_lab = R["ci_lo"][lab_mask]
+            ci_hi_lab = R["ci_hi"][lab_mask]
+            widths = ci_hi_lab - ci_lo_lab           # shape (n_labeled, 3)
+            mean_widths = widths.mean(axis=0)        # per segment
+            max_widths  = widths.max(axis=0)
+            pred_lab    = R["full"]["ord"]["pred"][lab_mask]
+
+            # KPI strip
+            ks = st.columns(4)
+            kpi_card(ks[0], "Mean CI width — P(A)",
+                     f"±{mean_widths[0]/2*100:.1f}pp",
+                     helper="Avg uncertainty on SEG_A probability",
+                     style="accent", icon="📏",
+                     status="info", status_label="Stability")
+            kpi_card(ks[1], "Mean CI width — P(B)",
+                     f"±{mean_widths[1]/2*100:.1f}pp",
+                     helper="Avg uncertainty on SEG_B probability",
+                     style="warn", icon="📏",
+                     status="info", status_label="Stability")
+            kpi_card(ks[2], "Mean CI width — P(C)",
+                     f"±{mean_widths[2]/2*100:.1f}pp",
+                     helper="Avg uncertainty on SEG_C probability",
+                     style="danger", icon="📏",
+                     status="info", status_label="Stability")
+            # share of HCPs with stable predictions (max CI width below 15pp)
+            stable_mask = widths.max(axis=1) < 0.15
+            stable_pct  = float(stable_mask.mean() * 100)
+            kpi_card(ks[3], "Stable predictions", f"{stable_pct:.1f}%",
+                     helper="Max CI width < 15pp across A/B/C",
+                     style="good", icon="✓",
+                     status=("ok" if stable_pct > 75
+                              else "fair" if stable_pct > 50 else "poor"),
+                     status_label="Stable")
+
+            # ── Histogram of CI widths per segment ──
+            df_w = pd.DataFrame({
+                "Width": np.concatenate([widths[:, 0], widths[:, 1], widths[:, 2]]),
+                "Segment": (["P(A)"] * len(widths)
+                             + ["P(B)"] * len(widths)
+                             + ["P(C)"] * len(widths)),
+            })
+            fig_w = px.histogram(
+                df_w, x="Width", color="Segment",
+                color_discrete_map={"P(A)": SEG_COLORS["SEG_A"],
+                                       "P(B)": SEG_COLORS["SEG_B"],
+                                       "P(C)": SEG_COLORS["SEG_C"]},
+                barmode="overlay", opacity=0.55, nbins=40,
+            )
+            _style_fig(fig_w, height=380,
+                        title="Distribution of 95% CI widths")
+            fig_w.update_layout(
+                xaxis=dict(title="CI width (upper − lower)",
+                            tickformat=".0%"),
+                yaxis_title="Labeled HCP count",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                              xanchor="right", x=1),
+            )
+            st.plotly_chart(fig_w, use_container_width=True)
+
+            # ── Box plot: CI width per predicted segment ──
+            col_box, col_top = st.columns([3, 2])
+            with col_box:
+                # Compute the CI width corresponding to each HCP's predicted class
+                idx_class = {"SEG_A": 0, "SEG_B": 1, "SEG_C": 2}
+                pred_class_idx = np.array([idx_class.get(p, 0) for p in pred_lab])
+                width_pred = widths[np.arange(len(pred_lab)), pred_class_idx]
+                df_box = pd.DataFrame({
+                    "Predicted segment": pred_lab,
+                    "CI width": width_pred,
+                })
+                fig_box = px.box(
+                    df_box, x="Predicted segment", y="CI width",
+                    color="Predicted segment",
+                    color_discrete_map=SEG_COLORS,
+                    category_orders={"Predicted segment":
+                                      ["SEG_A", "SEG_B", "SEG_C"]},
+                    points=False,
+                )
+                _style_fig(fig_box, height=380,
+                            title="CI width on the predicted segment")
+                fig_box.update_layout(
+                    yaxis=dict(tickformat=".0%"),
+                    showlegend=False, xaxis_title="",
+                )
+                st.plotly_chart(fig_box, use_container_width=True)
+
+            with col_top:
+                # Most uncertain HCPs — top 12 by max CI width
+                max_w_per_hcp = widths.max(axis=1)
+                ids_lab   = R["ids"][lab_mask]
+                y_true_lab = R["y_true"][lab_mask]
+                order = np.argsort(-max_w_per_hcp)[:12]
+                df_unc = pd.DataFrame({
+                    "HCP_ID":   ids_lab[order],
+                    "True":     y_true_lab[order],
+                    "Predicted": pred_lab[order],
+                    "Max CI width": max_w_per_hcp[order],
+                }).round(3)
+                st.markdown(
+                    "<div style='font-size:13px;color:#0F172A;font-weight:700;"
+                    "padding:6px 0 2px 2px;'>Most uncertain labeled HCPs</div>"
+                    "<div style='font-size:11px;color:#64748B;"
+                    "padding:0 0 8px 2px;'>"
+                    "Widest CI across A / B / C — candidates for human review."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+                st.dataframe(
+                    df_unc, use_container_width=True, hide_index=True,
+                    height=360,
+                    column_config={
+                        "Max CI width": st.column_config.ProgressColumn(
+                            "Max CI width", format="%.2f",
+                            min_value=0, max_value=1),
+                    },
+                )
+
+            st.markdown(
+                '<div class="info-panel">'
+                '<div class="info-panel-icon">💡</div>'
+                '<div class="info-panel-content">'
+                '<b>CIs are computed only for labeled HCPs.</b> Each labeled '
+                'doctor is scored by all 5 cross-validation folds; the CI is '
+                '<code>mean ± 1.96 × std</code> across folds (clipped to '
+                '[0, 1]). Unlabeled doctors are scored by the final model on '
+                'all labeled data — they get a point prediction without CI. '
+                'Search any labeled HCP in the Doctor Explorer to see its '
+                'individual CI bars.'
+                '</div></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info("No labeled HCPs available — CIs require ground-truth "
+                     "labels for the cross-validation procedure.")
 
 # ── Probability Map (3D) ──
     with tabs[2]:
@@ -3422,6 +3592,9 @@ if True:
                 "All HCPs with the Ordinal model probabilities and predictions — filter & export",
                 icon="📋")
 
+        # CI widths per HCP (0 for unlabeled — CIs are CV-derived)
+        ci_w   = R["ci_hi"] - R["ci_lo"]                   # (N, 3)
+        ci_max = ci_w.max(axis=1)
         df_out = pd.DataFrame({
             "HCP_ID": R["ids"],
             "True ATSEG": np.where(R["is_labeled"], R["y_true"], "Unlabeled"),
@@ -3429,10 +3602,18 @@ if True:
             "P(A)": R["full"]["ord"]["P_A"],
             "P(B)": R["full"]["ord"]["P_B"],
             "P(C)": R["full"]["ord"]["P_C"],
+            # 95% CI low/high bounds for the predicted-segment probability
+            "P(A) lo": R["ci_lo"][:, 0],
+            "P(A) hi": R["ci_hi"][:, 0],
+            "P(B) lo": R["ci_lo"][:, 1],
+            "P(B) hi": R["ci_hi"][:, 1],
+            "P(C) lo": R["ci_lo"][:, 2],
+            "P(C) hi": R["ci_hi"][:, 2],
+            "Max CI width": ci_max,
         }).round(3)
 
         # Filters
-        col_seg, col_pred = st.columns([1, 1])
+        col_seg, col_pred, col_unc = st.columns([1, 1, 1])
         with col_seg:
             seg_filter = st.multiselect(
                 "True ATSEG", ["SEG_A", "SEG_B", "SEG_C", "Unlabeled"],
@@ -3441,11 +3622,24 @@ if True:
             pred_filter = st.multiselect(
                 "Predicted segment", ["SEG_A", "SEG_B", "SEG_C"],
                 placeholder="All predictions")
+        with col_unc:
+            uncertainty = st.selectbox(
+                "Uncertainty filter",
+                ["All", "Stable (max CI < 15pp)",
+                  "Borderline (max CI 15–30pp)", "Uncertain (max CI > 30pp)"],
+            )
 
         if seg_filter:
             df_out = df_out[df_out["True ATSEG"].isin(seg_filter)]
         if pred_filter:
             df_out = df_out[df_out["Predicted"].isin(pred_filter)]
+        if uncertainty == "Stable (max CI < 15pp)":
+            df_out = df_out[df_out["Max CI width"] < 0.15]
+        elif uncertainty == "Borderline (max CI 15–30pp)":
+            df_out = df_out[(df_out["Max CI width"] >= 0.15)
+                              & (df_out["Max CI width"] < 0.30)]
+        elif uncertainty == "Uncertain (max CI > 30pp)":
+            df_out = df_out[df_out["Max CI width"] >= 0.30]
 
         # Summary KPIs
         cols = st.columns(4)
@@ -3485,7 +3679,29 @@ if True:
                     "P(B)", format="%.2f", min_value=0, max_value=1),
                 "P(C)": st.column_config.ProgressColumn(
                     "P(C)", format="%.2f", min_value=0, max_value=1),
+                "P(A) lo": st.column_config.NumberColumn(
+                    "A lo", format="%.2f"),
+                "P(A) hi": st.column_config.NumberColumn(
+                    "A hi", format="%.2f"),
+                "P(B) lo": st.column_config.NumberColumn(
+                    "B lo", format="%.2f"),
+                "P(B) hi": st.column_config.NumberColumn(
+                    "B hi", format="%.2f"),
+                "P(C) lo": st.column_config.NumberColumn(
+                    "C lo", format="%.2f"),
+                "P(C) hi": st.column_config.NumberColumn(
+                    "C hi", format="%.2f"),
+                "Max CI width": st.column_config.ProgressColumn(
+                    "Max CI",
+                    help="Widest 95% CI across A/B/C "
+                         "(higher = more uncertain)",
+                    format="%.2f", min_value=0, max_value=1),
             },
+            column_order=("HCP_ID", "True ATSEG", "Predicted",
+                            "P(A)", "P(B)", "P(C)", "Max CI width",
+                            "P(A) lo", "P(A) hi",
+                            "P(B) lo", "P(B) hi",
+                            "P(C) lo", "P(C) hi"),
         )
 
         csv = df_out.to_csv(index=False).encode("utf-8")
