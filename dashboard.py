@@ -1295,6 +1295,9 @@ def train_pipeline(dataset_name: str, n_folds: int = 5):
         "ci_lo": ci_full_lo,             # (N, 3) lower CI bounds for P_A/B/C
         "ci_hi": ci_full_hi,             # (N, 3) upper CI bounds for P_A/B/C
         "shap_top": shap_full,           # list of [(feat_idx, shap_val), ...] per HCP
+        # Trained models (needed for counterfactual simulation)
+        "final_m1": m1,                  # P(>=B) model
+        "final_m2": m2,                  # P(>=C) model
     }
 
 
@@ -1328,6 +1331,168 @@ def segment_medians(dataset_name: str, top_n: int = 6):
 # Conversion Strategy (B → C) — adapted from 3d.2.py
 # ─────────────────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
+# ─────────────────────────────────────────────────────────────────────────
+# Counterfactual simulation (from counterfactual_simulation.py)
+# ─────────────────────────────────────────────────────────────────────────
+def _simulate(df_raw, feat_cols, _m1, _m2, seg_b_idx,
+               details_delta=None, details_target=None,
+               samples_delta=None, samples_target=None):
+    """Modify raw DETAILS/SAMPLES for SEG_B doctors → re-engineer → re-predict.
+
+    The features must be re-derived from raw because ratios and logs
+    (e.g. ratio_DETAILS_per_TRX, log_DETAILS_sum) depend on the same
+    columns being perturbed.
+    """
+    df_sim = df_raw.copy()
+    sb_rows = df_sim.index[seg_b_idx]
+
+    if details_delta is not None:
+        df_sim.loc[sb_rows, "DETAILS_sum"] = (
+            df_sim.loc[sb_rows, "DETAILS_sum"] + details_delta)
+    if details_target is not None:
+        df_sim.loc[sb_rows, "DETAILS_sum"] = (
+            df_sim.loc[sb_rows, "DETAILS_sum"].clip(lower=details_target))
+    if samples_delta is not None:
+        df_sim.loc[sb_rows, "SAMPLES_sum"] = (
+            df_sim.loc[sb_rows, "SAMPLES_sum"] + samples_delta)
+    if samples_target is not None:
+        df_sim.loc[sb_rows, "SAMPLES_sum"] = (
+            df_sim.loc[sb_rows, "SAMPLES_sum"].clip(lower=samples_target))
+
+    df_sim = add_features(df_sim)
+    X_sim = df_sim.reindex(columns=feat_cols, fill_value=0).fillna(0).values
+    PA_s, PB_s, PC_s, pred_s = predict_ordinal(_m1, _m2, X_sim[seg_b_idx])
+    return PA_s, PB_s, PC_s, pred_s
+
+
+@st.cache_data(show_spinner=False)
+def run_counterfactual_scenarios(dataset_name: str):
+    """Counterfactual scenarios for predicted-SEG_B doctors.
+
+    Returns a dict with:
+      - summary table (scenarios × outcomes)
+      - flippers vs stayers indices for the "+1 visit" scenario
+      - per-doctor P(C) before and after +1 visit (for distribution shift)
+      - diminishing-returns sweep (0..10 added visits → cumulative B→C count)
+    """
+    R = train_pipeline(dataset_name)
+    m1, m2 = R["final_m1"], R["final_m2"]
+    feat_cols = R["feat_cols"]
+    df_raw = load_data(dataset_name)
+
+    # Identify predicted-SEG_B doctors using the model output
+    pred_all = R["full"]["ord"]["pred"]
+    PC_all   = R["full"]["ord"]["P_C"]
+    seg_b_idx = np.where(pred_all == "SEG_B")[0]
+    n_seg_b = int(len(seg_b_idx))
+
+    # SEG_C medians on labeled doctors only
+    y_all = R["y_true"]; is_lab = R["is_labeled"]
+    c_mask = is_lab & (y_all == "SEG_C")
+    details_c_med = (float(np.median(df_raw["DETAILS_sum"].values[c_mask]))
+                      if c_mask.sum() > 0 else 0.0)
+    samples_c_med = (float(np.median(df_raw["SAMPLES_sum"].values[c_mask]))
+                      if c_mask.sum() > 0 else 0.0)
+
+    # ── Scenario list ──
+    scenarios = [
+        ("DETAILS", "+1 visit",
+         dict(details_delta=1)),
+        ("DETAILS", "+2 visits",
+         dict(details_delta=2)),
+        ("DETAILS", "+3 visits",
+         dict(details_delta=3)),
+        ("DETAILS", "+5 visits",
+         dict(details_delta=5)),
+        ("DETAILS", f"→ SEG_C median (≈{details_c_med:.0f})",
+         dict(details_target=details_c_med)),
+        ("SAMPLES", "+1 sample",
+         dict(samples_delta=1)),
+        ("SAMPLES", "+2 samples",
+         dict(samples_delta=2)),
+        ("COMBINED", "+1 visit + 1 sample",
+         dict(details_delta=1, samples_delta=1)),
+        ("COMBINED", "+2 visits + 2 samples",
+         dict(details_delta=2, samples_delta=2)),
+        ("COMBINED", "Both → SEG_C medians",
+         dict(details_target=details_c_med, samples_target=samples_c_med)),
+    ]
+
+    rows = []
+    for group, label, spec in scenarios:
+        _, _, PC_s, pred_s = _simulate(df_raw, feat_cols, m1, m2,
+                                        seg_b_idx, **spec)
+        b_to_c = int((pred_s == "SEG_C").sum())
+        b_to_a = int((pred_s == "SEG_A").sum())
+        b_stay = int((pred_s == "SEG_B").sum())
+        rows.append({
+            "Group": group, "Scenario": label,
+            "B→C": b_to_c, "B stays": b_stay, "B→A": b_to_a,
+            "Total B": n_seg_b,
+            "% to C": round(b_to_c / max(n_seg_b, 1) * 100, 1),
+            "Mean P(C) after": round(float(PC_s.mean()), 4),
+        })
+    summary_df = pd.DataFrame(rows)
+
+    # ── Detailed +1 visit run for the distribution-shift chart ──
+    _, _, PC_plus1, pred_plus1 = _simulate(df_raw, feat_cols, m1, m2,
+                                            seg_b_idx, details_delta=1)
+    flippers_mask = pred_plus1 == "SEG_C"
+    flippers_idx = seg_b_idx[flippers_mask]
+    stayers_mask = pred_plus1 == "SEG_B"
+    stayers_idx = seg_b_idx[stayers_mask]
+    pc_base_seg_b = PC_all[seg_b_idx]
+
+    # ── Diminishing returns sweep: 0..10 additional visits ──
+    dim_returns = []
+    for delta in range(0, 11):
+        if delta == 0:
+            n_flip = 0  # baseline
+        else:
+            _, _, _, pred_d = _simulate(df_raw, feat_cols, m1, m2,
+                                          seg_b_idx, details_delta=delta)
+            n_flip = int((pred_d == "SEG_C").sum())
+        dim_returns.append({"Added visits": delta, "B→C cumulative": n_flip})
+    dim_df = pd.DataFrame(dim_returns)
+    # Compute incremental gains
+    dim_df["Incremental"] = (dim_df["B→C cumulative"].diff().fillna(0)
+                              .astype(int))
+
+    return {
+        "n_seg_b": n_seg_b,
+        "details_c_med": details_c_med,
+        "samples_c_med": samples_c_med,
+        "summary": summary_df,
+        "dim_returns": dim_df,
+        "pc_base_seg_b": pc_base_seg_b,
+        "pc_after_plus1": PC_plus1,
+        "flippers_idx": flippers_idx,
+        "stayers_idx": stayers_idx,
+        "seg_b_idx": seg_b_idx,
+        "details_baseline": df_raw["DETAILS_sum"].values,
+        "samples_baseline": df_raw["SAMPLES_sum"].values,
+    }
+
+
+def simulate_single_hcp(dataset_name: str, hcp_idx: int,
+                         details_delta: int = 0,
+                         samples_delta: int = 0):
+    """Per-HCP counterfactual — used by the Doctor Explorer."""
+    R = train_pipeline(dataset_name)
+    m1, m2 = R["final_m1"], R["final_m2"]
+    feat_cols = R["feat_cols"]
+    df_raw = load_data(dataset_name)
+    df_sim = df_raw.copy()
+    if details_delta:
+        df_sim.loc[df_sim.index[hcp_idx], "DETAILS_sum"] += details_delta
+    if samples_delta:
+        df_sim.loc[df_sim.index[hcp_idx], "SAMPLES_sum"] += samples_delta
+    df_sim = add_features(df_sim)
+    X_sim = df_sim.reindex(columns=feat_cols, fill_value=0).fillna(0).values
+    PA, PB, PC, pred = predict_ordinal(m1, m2, X_sim[[hcp_idx]])
+    return float(PA[0]), float(PB[0]), float(PC[0]), str(pred[0])
+
+
 def compute_conversion_strategy(dataset_name: str,
                                  n_candidates: int = N_CONVERSION_CANDIDATES):
     """Find predicted-SEG_B doctors whose P_C is highest and quantify the
@@ -1740,6 +1905,7 @@ if True:
         "🌐  Probability Map",
         "🔬  Doctor Explorer",
         "🎯  Conversion Strategy",
+        "🔮  Counterfactual",
         "📋  Predictions Table",
     ])
 
@@ -2385,6 +2551,76 @@ if True:
                 )
                 st.markdown(breakdown_html, unsafe_allow_html=True)
 
+                # ── Per-HCP counterfactual ── (only meaningful for SEG_B doctors)
+                if pred_o == "SEG_B":
+                    section("Counterfactual — what if we engage more?",
+                            "Pull the sliders to simulate extra rep visits "
+                            "or samples; the Ordinal model re-scores this "
+                            "HCP in real time.",
+                            icon="🔮")
+                    c_left, c_right = st.columns([2, 3])
+                    with c_left:
+                        cf_visits = st.slider(
+                            "Add visits (DETAILS_sum)", 0, 10, 1,
+                            key=f"cf_visits_{hcp_id}")
+                        cf_samples = st.slider(
+                            "Add samples (SAMPLES_sum)", 0, 10, 0,
+                            key=f"cf_samples_{hcp_id}")
+                    pa_cf, pb_cf, pc_cf, pred_cf = simulate_single_hcp(
+                        dataset, idx,
+                        details_delta=cf_visits, samples_delta=cf_samples)
+                    with c_right:
+                        # Show before/after stacked bars
+                        st.markdown(
+                            '<div class="doctor-card" style="padding:18px 20px;">'
+                            '<div style="font-size:13px;color:#0F172A;'
+                            'font-weight:700;margin-bottom:10px;">'
+                            'Probability comparison'
+                            '</div>'
+                            + stacked_bar("📍  Today",      pa_o,  pb_o,  pc_o)
+                            + stacked_bar("🔮  After Δ",   pa_cf, pb_cf, pc_cf)
+                            + '</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    # Verdict
+                    flip_html = ""
+                    if pred_cf == "SEG_C" and pred_o != "SEG_C":
+                        flip_html = (
+                            '<div class="info-panel" style="background:#F0FDF4;'
+                            'border-color:#86EFAC;border-left-color:#16A34A;">'
+                            '<div class="info-panel-icon">✅</div>'
+                            f'<div class="info-panel-content">'
+                            f'<b>Conversion candidate.</b> With +{cf_visits} '
+                            f'visit(s) and +{cf_samples} sample(s) this HCP '
+                            f'flips <b>SEG_B → SEG_C</b>: '
+                            f'P(C) moves from <b>{pc_o*100:.1f}%</b> to '
+                            f'<b>{pc_cf*100:.1f}%</b>.'
+                            f'</div></div>')
+                    elif pred_cf == "SEG_A":
+                        flip_html = (
+                            '<div class="info-panel" style="background:#FFF7ED;'
+                            'border-color:#FED7AA;border-left-color:#F47B20;">'
+                            '<div class="info-panel-icon">⚠</div>'
+                            f'<div class="info-panel-content">'
+                            f'Under this intervention the model would '
+                            f'reclassify this HCP as <b>SEG_A</b> '
+                            f'(P(A) = <b>{pa_cf*100:.1f}%</b>) — likely an '
+                            f'edge case worth reviewing.'
+                            f'</div></div>')
+                    else:
+                        flip_html = (
+                            '<div class="info-panel">'
+                            '<div class="info-panel-icon">💡</div>'
+                            f'<div class="info-panel-content">'
+                            f'Still <b>SEG_B</b> after intervention. '
+                            f'P(C) shifts from <b>{pc_o*100:.1f}%</b> '
+                            f'to <b>{pc_cf*100:.1f}%</b> '
+                            f'(Δ {(pc_cf - pc_o)*100:+.1f}pp). '
+                            f'Try a larger Δ or layer in samples.'
+                            f'</div></div>')
+                    st.markdown(flip_html, unsafe_allow_html=True)
+
                 # ── Confidence intervals (Ordinal, 5-fold CV) ──
                 if R["is_labeled"][idx]:
                     section("Prediction confidence — 95% CI",
@@ -2886,10 +3122,304 @@ if True:
         else:
             st.info("No SEG_B candidates available.")
 
-    # ── Predictions Table ──
+    # ── Counterfactual simulation ──
     with tabs[5]:
+        section("Counterfactual — What if Pfizer increases engagement?",
+                "Simulate engagement deltas on predicted-SEG_B doctors. "
+                "Modifies raw DETAILS / SAMPLES values, re-derives ALL "
+                "engineered features, and re-scores the Ordinal model to "
+                "count how many doctors flip from SEG_B to SEG_C.",
+                icon="🔮")
+
+        with st.spinner("Running counterfactual scenarios..."):
+            CF = run_counterfactual_scenarios(dataset)
+
+        n_seg_b = CF["n_seg_b"]
+        sm = CF["summary"]
+        dim = CF["dim_returns"]
+
+        # Headline KPIs from the +1 visit scenario (most common ask)
+        plus1_row = sm[sm["Scenario"] == "+1 visit"].iloc[0]
+        plus1_flips = int(plus1_row["B→C"])
+        plus1_pct   = float(plus1_row["% to C"])
+
+        kcols = st.columns(4)
+        kpi_card(kcols[0], "Predicted SEG_B HCPs", f"{n_seg_b:,}",
+                 helper="Universe to influence",
+                 style="warn", icon="🟧",
+                 status="info", status_label="Universe")
+        kpi_card(kcols[1], "+1 visit converts",
+                 f"{plus1_flips:,}",
+                 helper=f"{plus1_pct:.1f}% of SEG_B flip to SEG_C",
+                 style="good", icon="📈",
+                 status=("ok" if plus1_pct >= 5
+                          else "fair" if plus1_pct >= 2 else "poor"),
+                 status_label=("Strong" if plus1_pct >= 5
+                                else "Moderate" if plus1_pct >= 2
+                                else "Weak"))
+        # Diminishing-returns headline: +2 incremental over +1
+        d2 = int(dim[dim["Added visits"] == 2]["B→C cumulative"].iloc[0])
+        delta_2_vs_1 = d2 - plus1_flips
+        kpi_card(kcols[2], "+2nd visit incremental",
+                 f"{delta_2_vs_1:,}",
+                 helper="Extra converts from the 2nd added visit",
+                 style="accent", icon="↗",
+                 status="info", status_label="Marginal")
+        # SEG_C median DETAILS scenario
+        med_row = sm[sm["Group"] == "DETAILS"].iloc[-1]
+        med_flips = int(med_row["B→C"])
+        kpi_card(kcols[3], "→ SEG_C median visits",
+                 f"{med_flips:,}",
+                 helper=f"Clip DETAILS to ≥{CF['details_c_med']:.0f}",
+                 style="danger", icon="🎯",
+                 status="info", status_label="Ceiling")
+
+        st.markdown(
+            '<div class="info-panel">'
+            '<div class="info-panel-icon">💡</div>'
+            '<div class="info-panel-content">'
+            '<b>How to read this tab:</b> we modify the raw '
+            '<code>DETAILS_sum</code> / <code>SAMPLES_sum</code> for the '
+            'predicted SEG_B universe, re-derive every engineered feature '
+            '(ratios, logs, total_engagement, etc.) so the perturbation '
+            'propagates correctly, then re-score with the Ordinal model. '
+            'The "% to C" figure is the share of SEG_B doctors who flip to '
+            'SEG_C under each scenario — the business signal for ROI.'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Scenario impact bar chart ──
+        section("Scenario impact",
+                "How many SEG_B doctors move to each outcome per scenario",
+                icon="📊")
+
+        # Long-format for stacked bars
+        long = sm.melt(id_vars=["Group", "Scenario", "Total B", "% to C",
+                                 "Mean P(C) after"],
+                        value_vars=["B→C", "B stays", "B→A"],
+                        var_name="Outcome", value_name="Count")
+        outcome_colors = {
+            "B→C":     SEG_COLORS["SEG_C"],
+            "B stays": SEG_COLORS["SEG_B"],
+            "B→A":     SEG_COLORS["SEG_A"],
+        }
+        fig = px.bar(
+            long, x="Count", y="Scenario", color="Outcome",
+            orientation="h", barmode="stack",
+            color_discrete_map=outcome_colors,
+            hover_data=["Group", "% to C", "Mean P(C) after"],
+            category_orders={"Outcome": ["B→C", "B stays", "B→A"]},
+        )
+        fig.update_traces(marker_line_width=0, opacity=0.92)
+        _style_fig(fig, height=440, title="SEG_B outcome distribution per scenario")
+        fig.update_layout(
+            yaxis={"categoryorder": "array",
+                    "categoryarray": sm["Scenario"].tolist()[::-1]},
+            xaxis_title="Number of SEG_B doctors",
+            yaxis_title="",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                          xanchor="right", x=1),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # ── Diminishing returns line chart ──
+        section("Diminishing returns — DETAILS sweep",
+                "Cumulative B→C flips as we add 0..10 visits to each "
+                "predicted-SEG_B doctor. The slope shows when extra visits "
+                "stop adding meaningful conversions.",
+                icon="📉")
+
+        col_a, col_b = st.columns([3, 2])
+        with col_a:
+            fig_dim = go.Figure()
+            fig_dim.add_trace(go.Scatter(
+                x=dim["Added visits"], y=dim["B→C cumulative"],
+                mode="lines+markers", name="Cumulative B→C",
+                line=dict(color=PFIZER_BLUE, width=3),
+                marker=dict(size=8, color=PFIZER_BLUE,
+                              line=dict(color="white", width=1.5)),
+                hovertemplate=("Added visits: %{x}<br>"
+                                "Cumulative B→C: %{y:,}<extra></extra>"),
+                fill="tozeroy",
+                fillcolor="rgba(0,114,206,0.10)",
+            ))
+            _style_fig(fig_dim, height=380,
+                        title="Cumulative converts vs added visits")
+            fig_dim.update_layout(
+                xaxis=dict(title="Additional visits per SEG_B HCP",
+                            dtick=1),
+                yaxis_title="Cumulative B→C count",
+            )
+            st.plotly_chart(fig_dim, use_container_width=True)
+
+        with col_b:
+            fig_inc = px.bar(
+                dim[dim["Added visits"] > 0],
+                x="Added visits", y="Incremental",
+                text="Incremental",
+                color="Incremental", color_continuous_scale="Blues",
+            )
+            fig_inc.update_traces(textposition="outside",
+                                    marker_line_width=0)
+            _style_fig(fig_inc, height=380,
+                        title="Incremental converts per added visit")
+            fig_inc.update_layout(
+                coloraxis_showscale=False,
+                xaxis=dict(title="Visit #", dtick=1),
+                yaxis_title="New B→C from this visit",
+            )
+            st.plotly_chart(fig_inc, use_container_width=True)
+
+        # ── P(C) distribution shift histogram ──
+        section("P(C) distribution shift — SEG_B before vs after +1 visit",
+                "How the SEG_C probability moves for the SEG_B universe "
+                "when each doctor receives one extra visit.",
+                icon="📐")
+
+        pc_base = CF["pc_base_seg_b"]
+        pc_after = CF["pc_after_plus1"]
+
+        bins = np.linspace(0, 1, 21)
+        df_hist = pd.DataFrame({
+            "P(C)": np.concatenate([pc_base, pc_after]),
+            "When": (["Baseline"] * len(pc_base)
+                      + ["After +1 visit"] * len(pc_after)),
+        })
+        fig_pc = px.histogram(
+            df_hist, x="P(C)", color="When",
+            barmode="overlay", opacity=0.55, nbins=20,
+            color_discrete_map={
+                "Baseline": "#94A3B8",
+                "After +1 visit": SEG_COLORS["SEG_C"],
+            },
+        )
+        # Vertical line at P(C)=0.30 threshold
+        fig_pc.add_shape(type="line", x0=THR_C, x1=THR_C,
+                          y0=0, y1=1, yref="paper",
+                          line=dict(color="#0B1B33", width=2, dash="dash"))
+        fig_pc.add_annotation(
+            x=THR_C, y=1.02, yref="paper",
+            text=f"<b>P(C) ≥ {THR_C}</b> → SEG_C",
+            showarrow=False, font=dict(size=11, color="#0B1B33"),
+        )
+        _style_fig(fig_pc, height=420)
+        fig_pc.update_layout(
+            xaxis_tickformat=".0%",
+            yaxis_title="SEG_B doctor count",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                          xanchor="right", x=1),
+        )
+        st.plotly_chart(fig_pc, use_container_width=True)
+
+        # ── Flippers vs Stayers profile (+1 visit) ──
+        section("Flippers vs Stayers (+1 visit)",
+                "Who actually converts with one extra visit? Compare the "
+                "two cohorts on raw engagement and prescribing metrics.",
+                icon="🧬")
+
+        flippers = CF["flippers_idx"]
+        stayers  = CF["stayers_idx"]
+        details_baseline = CF["details_baseline"]
+        samples_baseline = CF["samples_baseline"]
+        df_full_raw = load_data(dataset)
+
+        def cohort_stats(name, idx):
+            return {
+                "Cohort": name,
+                "n": int(len(idx)),
+                "Mean P(C) before": float(CF["pc_base_seg_b"][
+                    np.where(np.isin(CF["seg_b_idx"], idx))[0]
+                ].mean()) if len(idx) > 0 else 0,
+                "Mean DETAILS": float(details_baseline[idx].mean()) if len(idx) > 0 else 0,
+                "Mean SAMPLES": float(samples_baseline[idx].mean()) if len(idx) > 0 else 0,
+                "Mean UC_TRX_sum": float(df_full_raw["UC_TRX_sum"].values[idx].mean()) if len(idx) > 0 else 0,
+                "Mean ORAL_TRX_sum": float(df_full_raw["ORAL_TRX_sum"].values[idx].mean()) if len(idx) > 0 else 0,
+                "Mean IL23_TRX_sum": float(df_full_raw["IL23_TRX_sum"].values[idx].mean()) if len(idx) > 0 else 0,
+            }
+        df_cohort = pd.DataFrame([
+            cohort_stats("Flippers (B→C)", flippers),
+            cohort_stats("Stayers (B stays)", stayers),
+        ])
+        st.dataframe(df_cohort.round(3), use_container_width=True,
+                      hide_index=True)
+
+        # Side-by-side bar of mean features per cohort
+        feat_compare = ["Mean DETAILS", "Mean SAMPLES",
+                         "Mean UC_TRX_sum", "Mean ORAL_TRX_sum",
+                         "Mean IL23_TRX_sum"]
+        plot_rows = []
+        for _, r in df_cohort.iterrows():
+            for f in feat_compare:
+                plot_rows.append({"Cohort": r["Cohort"],
+                                    "Feature": f.replace("Mean ", ""),
+                                    "Value": float(r[f])})
+        plot_df = pd.DataFrame(plot_rows)
+        fig_cohort = px.bar(
+            plot_df, x="Feature", y="Value", color="Cohort",
+            barmode="group", text=plot_df["Value"].round(2),
+            color_discrete_sequence=[SEG_COLORS["SEG_C"], "#94A3B8"],
+        )
+        fig_cohort.update_traces(textposition="outside",
+                                  marker_line_width=0)
+        _style_fig(fig_cohort, height=420,
+                    title="Mean raw feature values — Flippers vs Stayers")
+        fig_cohort.update_layout(
+            yaxis_title="",
+            xaxis_title="",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                          xanchor="right", x=1),
+        )
+        st.plotly_chart(fig_cohort, use_container_width=True)
+
+        # ── Top flippers table (CSV export) ──
+        section("Top flippers — easy wins",
+                "Predicted-SEG_B doctors who flip to SEG_C with just +1 visit, "
+                "ranked by P(C) after intervention.",
+                icon="🏆")
+
+        if len(flippers) > 0:
+            pc_after_flippers = CF["pc_after_plus1"][
+                np.isin(CF["seg_b_idx"], flippers)]
+            df_flip = pd.DataFrame({
+                "HCP_ID": R["ids"][flippers],
+                "True ATSEG": np.where(R["is_labeled"][flippers],
+                                         R["y_true"][flippers], "Unlabeled"),
+                "P(C) before": CF["pc_base_seg_b"][
+                    np.isin(CF["seg_b_idx"], flippers)],
+                "P(C) after +1": pc_after_flippers,
+                "DETAILS before": details_baseline[flippers],
+                "SAMPLES before": samples_baseline[flippers],
+                "UC_TRX_sum": df_full_raw["UC_TRX_sum"].values[flippers],
+            }).round(3).sort_values("P(C) after +1", ascending=False)
+
+            st.dataframe(
+                df_flip, use_container_width=True, hide_index=True, height=480,
+                column_config={
+                    "P(C) before": st.column_config.ProgressColumn(
+                        "P(C) before", format="%.2f",
+                        min_value=0, max_value=1),
+                    "P(C) after +1": st.column_config.ProgressColumn(
+                        "P(C) after +1", format="%.2f",
+                        min_value=0, max_value=1),
+                },
+            )
+            csv_flip = df_flip.to_csv(index=False).encode("utf-8")
+            st.download_button("⬇  Download flippers (CSV)",
+                                data=csv_flip,
+                                file_name="counterfactual_flippers.csv",
+                                mime="text/csv")
+        else:
+            st.info("No SEG_B doctors flip to SEG_C with +1 visit.")
+
+        # ── Raw scenario table ──
+        with st.expander("📋  All scenarios — raw counts"):
+            st.dataframe(sm, use_container_width=True, hide_index=True)
+
+    # ── Predictions Table ──
+    with tabs[6]:
         section("Full Predictions Table",
-                "All HCPs with both models' probabilities and predictions — filter & export",
+                "All HCPs with the Ordinal model probabilities and predictions — filter & export",
                 icon="📋")
 
         df_out = pd.DataFrame({
