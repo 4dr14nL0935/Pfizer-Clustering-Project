@@ -1750,27 +1750,15 @@ def kpi_card(col, label, value, helper="", style="", icon="",
              status=None, status_label=""):
     cls = f"kpi-card {style}".strip()
     icon_html = f'<div class="kpi-icon">{icon}</div>' if icon else ""
-    status_html = (f'<div class="kpi-status {status}">{status_label}</div>'
-                    if status else "")
-    col.markdown(
-        f"""
-        <div class="{cls}">
-            {icon_html}
-            <div class="kpi-content-top">
-                <div class="kpi-label">{label}</div>
-                <div class="kpi-value">{value}</div>
-                <div class="kpi-delta">{helper}</div>
-            </div>
-            <div class="kpi-content-bottom">
-                {status_html}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    status_html = f'<div class="kpi-status {status}">{status_label}</div>' if status else ""
+    
+    # Eliminamos las tabulaciones internas para obligar a Streamlit a leerlo como HTML puro
+    html_content = f'<div class="{cls}">{icon_html}<div class="kpi-content-top"><div class="kpi-label">{label}</div><div class="kpi-value">{value}</div><div class="kpi-delta">{helper}</div></div><div class="kpi-content-bottom">{status_html}</div></div>'
+    
+    col.markdown(html_content, unsafe_allow_html=True)
 
 
-def section(title, subtitle="", icon="📊"):
+def section(title, subtitle="", icon=""):
     sub = f"<p>{subtitle}</p>" if subtitle else ""
     html = (
         f'<div class="section-header">'
@@ -2411,7 +2399,7 @@ def _render_cover():
           <div class="cover-section">About the Model</div>
           <div class="model-card">
             <div class="model-card-header">
-              <div class="model-card-icon">🧠</div>
+              <div class="model-card-icon"></div>
               <div>
                 <div class="model-card-title">Ordinal XGBoost Framework</div>
                 <div class="model-card-sub">Business-calibrated · v3.2 · SHAP-explainable</div>
@@ -2578,34 +2566,34 @@ def _render_cover():
     # 4. Inside the dashboard — 7 tab teaser (with hover popups)
     # ═══════════════════════════════════════════════════════════════
     tabs_meta = [
-        ("🔍", "Data Overview",
+        ( "Data Overview",
          "ATSEG distribution by segment, histograms and box plots of the "
          "key prescribing features broken down by SEG_A / SEG_B / SEG_C."),
-        ("📈", "Performance & CIs",
+        ( "Performance & CIs",
          "Confusion matrices (counts + row-normalised), per-segment "
          "precision & recall, and the 95% confidence-interval section: "
          "mean CI widths per segment, distribution histogram, box plot "
          "by predicted class, and the most uncertain HCPs to review."),
-        ("🌐", "Probability Map",
+        ("Probability Map",
          "Interactive 3D scatter of P(A) · P(B) · P(C) for every HCP, "
          "coloured by predicted or true segment. Includes a live HCP "
          "search box that highlights one point with a hover-style tooltip."),
-        ("🔬", "Doctor Explorer",
+        ("Doctor Explorer",
          "Per-HCP profile: ATSEG label vs model prediction, probability "
          "breakdown, per-HCP counterfactual sliders, 95% CIs, SHAP top "
          "features, prescribing profile table, and the individual radar "
          "with multiple scaling options."),
-        ("🎯", "Conversion Strategy",
+        ("Conversion Strategy",
          "Predicted-SEG_B doctors closest to SEG_C, ranked by P(C), with "
          "the engineered-feature gaps that hold each one back and the "
          "single top actionable lever per candidate."),
-        ("🔮", "Counterfactual",
+        ("Counterfactual",
          "Simulates 10 engagement deltas (+1, +2, +3, +5 visits, +1/+2 "
          "samples, combined, → SEG_C median) on the SEG_B universe. "
          "Stacked-bar scenario impact, diminishing-returns sweep, "
          "P(C) distribution shift, flipper vs stayer profile, and a "
          "downloadable list of easy-win HCPs."),
-        ("📋", "Predictions Table",
+        ("Predictions Table",
          "Full sortable table of every HCP — true ATSEG, predicted "
          "segment, P(A)/P(B)/P(C) with progress-bar rendering, CI lo/hi "
          "bounds per class, max CI width column, an uncertainty filter, "
@@ -2776,11 +2764,11 @@ def show_dataset_preview():
                   })
 
 
-sb_label("📂", "Dataset", color="orange")
+sb_label("", "Dataset", color="orange")
 
 # Clickable styled button → opens the preview popup
 if st.sidebar.button(
-    "📂  doctors_aggregated.csv",
+    "doctors_aggregated.csv",
     key="ds_preview_btn",
     use_container_width=True,
     help="Click to preview the dataset in a popup",
@@ -2812,11 +2800,11 @@ mode = "Single model"
 sb_divider()
 
 # Active model summary card (replaces the old picker)
-sb_label("🧠", "Model", color="blue")
+sb_label("" ,"Model", color="blue")
 st.sidebar.markdown(
     '<div class="sb-current">'
     '<span class="sb-current-label">Active</span>'
-    '<span class="sb-current-value">🎯 Ordinal (v3.2)</span>'
+    '<span class="sb-current-value"> Ordinal (v3.2)</span>'
     '</div>',
     unsafe_allow_html=True,
 )
@@ -2975,9 +2963,9 @@ st.markdown(
             (capstone v3.2). Decision cascade is tuned to minimise the
             catastrophic SEG_C → SEG_A misclassification.</p>
             <div class="hero-divider"></div>
-            <span class="hero-pill">📂 Dataset <b>doctors_aggregated.csv</b></span>
-            <span class="hero-pill">🧠 Model <b>Ordinal v3.2</b></span>
-            <span class="hero-pill">🎯 P(A)≥<b>{THR_A}</b> · P(C)≥<b>{THR_C}</b> · dominance rule</span>
+            <span class="hero-pill">Dataset <b>doctors_aggregated.csv</b></span>
+            <span class="hero-pill">Model <b>Ordinal v3.2</b></span>
+            <span class="hero-pill">P(A)≥<b>{THR_A}</b> · P(C)≥<b>{THR_C}</b> · dominance rule</span>
         </div>
     </div>
     """,
@@ -3019,20 +3007,20 @@ if True:
 
 
     tabs = st.tabs([
-        "🔍  Data Overview",
-        "📈  Model Performance",
-        "🌐  Probability Map",
-        "🔬  Doctor Explorer",
-        "🎯  Conversion Strategy",
-        "🔮  Counterfactual",
-        "📋  Predictions Table",
+        "Data Overview",
+        "Model Performance",
+        "Probability Map",
+        "Doctor Explorer",
+        "Conversion Strategy",
+        "Counterfactual",
+        "Predictions Table",
     ])
 
     # ── Data Overview ──
     with tabs[0]:
         section("ATSEG Segmentation Overview",
                 "Model performance metrics and HCP distribution across segments",
-                icon="🔍")
+                icon="")
 
 
 
@@ -3040,23 +3028,23 @@ if True:
         cols = st.columns(5)
         kpi_card(cols[0], "HCPs Analyzed", f"{len(R['ids']):,}",
                  helper=f"{R['n_labeled']:,} labeled · {R['n_unlabeled']:,} unlabeled",
-                 style="neutral", icon="👥",
+                 style="neutral", icon="",
                  status="info", status_label="Loaded")
         kpi_card(cols[1], "Accuracy", f"{m['accuracy']*100:.1f}%",
                  helper="Overall correctness",
-                 style="good", icon="🎯",
+                 style="good", icon="",
                  status=acc_s, status_label=acc_l)
         kpi_card(cols[2], "Balanced Accuracy", f"{m['balanced_accuracy']*100:.1f}%",
                  helper="Class-balanced score",
-                 style="accent", icon="⚖",
+                 style="accent", icon="",
                  status=acc_s, status_label=acc_l)
         kpi_card(cols[3], "Recall (SEG_C)", f"{m['recall_C']*100:.1f}%",
                  helper="C captured by the model",
-                 style="warn", icon="🔬",
+                 style="warn", icon="",
                  status=rec_s, status_label=rec_l)
         kpi_card(cols[4], "SEG_C → SEG_A Loss", f"{m['c_lost_pct']*100:.1f}%",
                  helper="Catastrophic mis-classifications",
-                 style="danger", icon="⚠",
+                 style="danger", icon="",
                  status=closs_s, status_label=closs_l)
 
         # ── Row 2: Data distribution KPIs ──
@@ -3070,16 +3058,16 @@ if True:
         cols = st.columns(3)
         kpi_card(cols[0], "With ATSEG", f"{with_atseg:,}",
                  helper=f"{coverage:.1f}% coverage",
-                 style="good compact", icon="✓",
+                 style="good compact", icon="",
                  status="ok", status_label="Labeled")
         kpi_card(cols[1], "SEG_C HCPs",
                  f"{cnt_c:,}",
                  helper="High-value targets",
-                 style="danger compact", icon="🎯",
+                 style="danger compact", icon="",
                  status="info", status_label="Priority")
         kpi_card(cols[2], "Unlabeled", f"{no_atseg:,}",
                  helper=f"{100-coverage:.1f}% to score",
-                 style="warn compact", icon="❓",
+                 style="warn compact", icon="",
                  status="info", status_label="Scored")
 
         st.markdown("&nbsp;")
@@ -3135,7 +3123,7 @@ if True:
 
         section("Key Feature Distribution by ATSEG",
                 "Compare how key prescribing features differ across segments",
-                icon="📈")
+                icon="")
 
         if R["available_features"]:
             feat_options = [k for k, _, _ in R["available_features"]]
@@ -3189,7 +3177,7 @@ if True:
     with tabs[1]:
         section(f"{MODEL_LABELS[model_pick]} — Performance Detail",
                 "Confusion matrix + per-segment metrics computed on OOF predictions",
-                icon="📈")
+                icon="")
 
         cm = m["confusion_matrix"]
         cm_norm = cm / cm.sum(axis=1, keepdims=True)
@@ -3254,7 +3242,7 @@ if True:
                 "Width = upper bound − lower bound across 5 CV folds for each "
                 "labeled HCP. Narrow bands ⇒ stable predictions; wide bands "
                 "⇒ noisy predictions worth manual review.",
-                icon="📐")
+                icon="")
 
         # CI bounds are only meaningful for labeled HCPs (computed from CV folds)
         lab_mask = R["is_labeled"]
@@ -3271,24 +3259,24 @@ if True:
             kpi_card(ks[0], "Mean CI width — P(A)",
                      f"±{mean_widths[0]/2*100:.1f}pp",
                      helper="Avg uncertainty on SEG_A probability",
-                     style="accent", icon="📏",
+                     style="accent", icon="",
                      status="info", status_label="Stability")
             kpi_card(ks[1], "Mean CI width — P(B)",
                      f"±{mean_widths[1]/2*100:.1f}pp",
                      helper="Avg uncertainty on SEG_B probability",
-                     style="warn", icon="📏",
+                     style="warn", icon="",
                      status="info", status_label="Stability")
             kpi_card(ks[2], "Mean CI width — P(C)",
                      f"±{mean_widths[2]/2*100:.1f}pp",
                      helper="Avg uncertainty on SEG_C probability",
-                     style="danger", icon="📏",
+                     style="danger", icon="",
                      status="info", status_label="Stability")
             # share of HCPs with stable predictions (max CI width below 15pp)
             stable_mask = widths.max(axis=1) < 0.15
             stable_pct  = float(stable_mask.mean() * 100)
             kpi_card(ks[3], "Stable predictions", f"{stable_pct:.1f}%",
                      helper="Max CI width < 15pp across A/B/C",
-                     style="good", icon="✓",
+                     style="good", icon="",
                      status=("ok" if stable_pct > 75
                               else "fair" if stable_pct > 50 else "poor"),
                      status_label="Stable")
@@ -3399,7 +3387,7 @@ if True:
         section("Probability Map",
                 f"Each HCP plotted by ({MODEL_LABELS_SHORT[model_pick]}) "
                 "P(A) · P(B) · P(C). Color = predicted segment",
-                icon="🌐")
+                icon="")
 
         # Build full data frame (all HCPs)
         df_full_map = pd.DataFrame({
@@ -3620,7 +3608,7 @@ if True:
             st.markdown(
                 f"""
                 <div class="info-panel">
-                    <div class="info-panel-icon">⭐</div>
+                    <div class="info-panel-icon"></div>
                     <div class="info-panel-content">
                         <b>HCP {highlight_row['HCP_ID']}</b> highlighted in gold.
                         Predicted <b>{highlight_row['Predicted']}</b>
@@ -3641,13 +3629,13 @@ if True:
     with tabs[3]:
         section("Doctor Explorer",
                 "Search any HCP to inspect probabilities and prescribing profile",
-                icon="🔬")
+                icon="")
 
         col_s, col_help = st.columns([3, 2])
         with col_s:
             search_q = st.text_input(
                 "Search by HCP ID (NUEVO_ID)",
-                placeholder="🔍  Enter HCP ID (e.g. 100012345)",
+                placeholder="Enter HCP ID (e.g. 100012345)",
                 label_visibility="collapsed",
             )
         with col_help:
@@ -3665,7 +3653,7 @@ if True:
                 st.markdown(
                     f"""
                     <div class="empty-state">
-                        <div class="empty-state-icon">🔎</div>
+                        <div class="empty-state-icon"></div>
                         <div class="empty-state-title">No HCP found</div>
                         <div class="empty-state-text">
                             No record with NUEVO_ID
@@ -3715,7 +3703,7 @@ if True:
                 # ── Segment cards ──
                 # If labeled  → 2 cards side by side: Current ATSEG | Predicted
                 # If unlabeled → 1 card centered:                     Predicted
-                section("Segment", icon="🧠")
+                section("Segment", icon="")
 
                 pred_class = pred_o if pred_o in VALID_LABELS else ""
 
@@ -3821,7 +3809,7 @@ if True:
                             "Pull the sliders to simulate extra rep visits "
                             "or samples; the Ordinal model re-scores this "
                             "HCP in real time.",
-                            icon="🔮")
+                            icon="")
                     c_left, c_right = st.columns([2, 3])
                     with c_left:
                         cf_visits = st.slider(
@@ -3853,7 +3841,7 @@ if True:
                         flip_html = (
                             '<div class="info-panel" style="background:#F0FDF4;'
                             'border-color:#86EFAC;border-left-color:#16A34A;">'
-                            '<div class="info-panel-icon">✅</div>'
+                            '<div class="info-panel-icon"></div>'
                             f'<div class="info-panel-content">'
                             f'<b>Conversion candidate.</b> With +{cf_visits} '
                             f'visit(s) and +{cf_samples} sample(s) this HCP '
@@ -3890,7 +3878,7 @@ if True:
                     section("Prediction confidence — 95% CI",
                             "Range of probabilities across 5 cross-validation "
                             "folds. Wider bars = less stable prediction.",
-                            icon="📐")
+                            icon="")
                     ci_lo = R["ci_lo"][idx]
                     ci_hi = R["ci_hi"][idx]
                     point = [pa_o, pb_o, pc_o]
@@ -3940,7 +3928,7 @@ if True:
                     section("Top features driving this prediction",
                             "SHAP contributions to the SEG_C decision. "
                             "Red = pushes toward SEG_C, blue = pushes away.",
-                            icon="🧠")
+                            icon="")
                     shap_rows = []
                     feat_cols = R["feat_cols"]
                     for j, val in R["shap_top"][idx]:
@@ -4019,7 +4007,7 @@ if True:
                 # ── Prescribing Profile ──
                 section("Prescribing Profile",
                         "How this HCP compares against the median for each segment",
-                        icon="🧬")
+                        icon="")
                 if R["available_features"]:
                     feat_rows = []
                     for k, name, _desc in R["available_features"]:
@@ -4061,7 +4049,7 @@ if True:
                         "Where does this HCP sit relative to the median "
                         "profile of each ATSEG segment? Try different scaling "
                         "approaches to surface different patterns.",
-                        icon="🕸")
+                        icon="")
 
                 feats_full, seg_meds = segment_medians(dataset, top_n=6)
                 feat_keys  = [k for k, _ in feats_full]
@@ -4244,7 +4232,7 @@ if True:
                 closest_color = SEG_COLORS[closest]
                 st.markdown(
                     f'<div class="info-panel">'
-                    f'<div class="info-panel-icon">🎯</div>'
+                    f'<div class="info-panel-icon"></div>'
                     f'<div class="info-panel-content">'
                     f'Using the <b>{scale_mode}</b> scale, this HCP is closest to '
                     f'<b style="color:{closest_color}">{closest}</b> '
@@ -4260,7 +4248,7 @@ if True:
             st.markdown(
                 """
                 <div class="empty-state">
-                    <div class="empty-state-icon">🔍</div>
+                    <div class="empty-state-icon"></div>
                     <div class="empty-state-title">Search any HCP to begin</div>
                     <div class="empty-state-text">
                         Enter a <b>NUEVO_ID</b> in the search box above to see:
@@ -4279,7 +4267,7 @@ if True:
         section("Conversion Strategy — B to C movement plan",
                 "Predicted SEG_B doctors closest to SEG_C, plus the engagement "
                 "gaps holding them back",
-                icon="🎯")
+                icon="")
 
         with st.spinner("Computing conversion candidates..."):
             cand_df, agg_df, c_meds = compute_conversion_strategy(dataset)
@@ -4296,22 +4284,22 @@ if True:
         cols = st.columns(4)
         kpi_card(cols[0], "Candidates Identified", f"{n_cand:,}",
                  helper="Predicted SEG_B with highest P(C)",
-                 style="accent", icon="🎯",
+                 style="accent", icon="",
                  status="info", status_label="Pipeline")
         kpi_card(cols[1], "Avg P(C) at Candidates",
                  f"{avg_pc*100:.1f}%",
                  helper="Mean SEG_C probability",
-                 style="warn", icon="📐",
+                 style="warn", icon="",
                  status="info", status_label="Confidence")
         kpi_card(cols[2], "With Actionable Gap",
                  f"{top_action_count:,}",
                  helper="Have at least 1 actionable lever to pull",
-                 style="good", icon="✓",
+                 style="good", icon="",
                  status="ok", status_label="Targetable")
         kpi_card(cols[3], "Critical Levers",
                  f"{n_actionable_below}",
                  helper="Actionable features ≥50% below SEG_C median",
-                 style="danger", icon="⚠",
+                 style="danger", icon="",
                  status="fair", status_label="Focus")
 
         # Insight panel
@@ -4333,7 +4321,7 @@ if True:
         section("Aggregate gaps — what's holding them back",
                 "% of B→C candidates whose feature value sits below the "
                 "SEG_C median. Higher = bigger collective gap to close.",
-                icon="📊")
+                icon="")
 
         agg_plot = agg_df.copy()
         agg_plot["Type"] = np.where(agg_plot["Actionable"],
@@ -4358,7 +4346,7 @@ if True:
         # Candidate table
         section("Conversion candidates",
                 f"Top {n_cand:,} predicted-SEG_B doctors ranked by P(C)",
-                icon="📋")
+                icon="")
 
         if n_cand > 0:
             # Format the dataframe with progress bars on probability cols
@@ -4393,7 +4381,7 @@ if True:
                 "Modifies raw DETAILS / SAMPLES values, re-derives ALL "
                 "engineered features, and re-scores the Ordinal model to "
                 "count how many doctors flip from SEG_B to SEG_C.",
-                icon="🔮")
+                icon="")
 
         with st.spinner("Running counterfactual scenarios..."):
             CF = run_counterfactual_scenarios(dataset)
@@ -4410,12 +4398,12 @@ if True:
         kcols = st.columns(4)
         kpi_card(kcols[0], "Predicted SEG_B HCPs", f"{n_seg_b:,}",
                  helper="Universe to influence",
-                 style="warn", icon="🟧",
+                 style="warn", icon="",
                  status="info", status_label="Universe")
         kpi_card(kcols[1], "+1 visit converts",
                  f"{plus1_flips:,}",
                  helper=f"{plus1_pct:.1f}% of SEG_B flip to SEG_C",
-                 style="good", icon="📈",
+                 style="good", icon="",
                  status=("ok" if plus1_pct >= 5
                           else "fair" if plus1_pct >= 2 else "poor"),
                  status_label=("Strong" if plus1_pct >= 5
@@ -4427,7 +4415,7 @@ if True:
         kpi_card(kcols[2], "+2nd visit incremental",
                  f"{delta_2_vs_1:,}",
                  helper="Extra converts from the 2nd added visit",
-                 style="accent", icon="↗",
+                 style="accent", icon="",
                  status="info", status_label="Marginal")
         # SEG_C median DETAILS scenario
         med_row = sm[sm["Group"] == "DETAILS"].iloc[-1]
@@ -4435,7 +4423,7 @@ if True:
         kpi_card(kcols[3], "→ SEG_C median visits",
                  f"{med_flips:,}",
                  helper=f"Clip DETAILS to ≥{CF['details_c_med']:.0f}",
-                 style="danger", icon="🎯",
+                 style="danger", icon="",
                  status="info", status_label="Ceiling")
 
         st.markdown(
@@ -4456,7 +4444,7 @@ if True:
         # ── Scenario impact bar chart ──
         section("Scenario impact",
                 "How many SEG_B doctors move to each outcome per scenario",
-                icon="📊")
+                icon="")
 
         # Long-format for stacked bars
         long = sm.melt(id_vars=["Group", "Scenario", "Total B", "% to C",
@@ -4492,7 +4480,7 @@ if True:
                 "Cumulative B→C flips as we add 0..10 visits to each "
                 "predicted-SEG_B doctor. The slope shows when extra visits "
                 "stop adding meaningful conversions.",
-                icon="📉")
+                icon="")
 
         col_a, col_b = st.columns([3, 2])
         with col_a:
@@ -4539,7 +4527,7 @@ if True:
         section("P(C) distribution shift — SEG_B before vs after +1 visit",
                 "How the SEG_C probability moves for the SEG_B universe "
                 "when each doctor receives one extra visit.",
-                icon="📐")
+                icon="")
 
         pc_base = CF["pc_base_seg_b"]
         pc_after = CF["pc_after_plus1"]
@@ -4580,7 +4568,7 @@ if True:
         section("Flippers vs Stayers (+1 visit)",
                 "Who actually converts with one extra visit? Compare the "
                 "two cohorts on raw engagement and prescribing metrics.",
-                icon="🧬")
+                icon="")
 
         flippers = CF["flippers_idx"]
         stayers  = CF["stayers_idx"]
@@ -4640,7 +4628,7 @@ if True:
         section("Top flippers — easy wins",
                 "Predicted-SEG_B doctors who flip to SEG_C with just +1 visit, "
                 "ranked by P(C) after intervention.",
-                icon="🏆")
+                icon="")
 
         if len(flippers) > 0:
             pc_after_flippers = CF["pc_after_plus1"][
@@ -4677,14 +4665,14 @@ if True:
             st.info("No SEG_B doctors flip to SEG_C with +1 visit.")
 
         # ── Raw scenario table ──
-        with st.expander("📋  All scenarios — raw counts"):
+        with st.expander("All scenarios — raw counts"):
             st.dataframe(sm, use_container_width=True, hide_index=True)
 
     # ── Predictions Table ──
     with tabs[6]:
         section("Full Predictions Table",
                 "All HCPs with the Ordinal model probabilities and predictions — filter & export",
-                icon="📋")
+                icon="")
 
         # CI widths per HCP (0 for unlabeled — CIs are CV-derived)
         ci_w   = R["ci_hi"] - R["ci_lo"]                   # (N, 3)
@@ -4739,7 +4727,7 @@ if True:
         cols = st.columns(4)
         kpi_card(cols[0], "Filtered HCPs", f"{len(df_out):,}",
                  helper=f"of {len(R['ids']):,} total",
-                 style="neutral", icon="👥",
+                 style="neutral", icon="",
                  status="info", status_label="Selection")
 
         labeled_count = df_out["True ATSEG"].isin(VALID_LABELS).sum()
@@ -4749,18 +4737,18 @@ if True:
 
         kpi_card(cols[1], "Hits (vs ATSEG)", f"{hits:,}",
                  helper=f"{(hits/max(labeled_count,1))*100:.1f}% of labeled",
-                 style="good", icon="🎯",
+                 style="good", icon="",
                  status="ok" if labeled_count > 0 else "info",
                  status_label="Match")
         kpi_card(cols[2], "Misses (vs ATSEG)", f"{misses:,}",
                  helper=f"{(misses/max(labeled_count,1))*100:.1f}% of labeled",
-                 style="warn", icon="↔",
+                 style="warn", icon="",
                  status="info", status_label="Differ")
 
         n_unlab = (df_out["True ATSEG"] == "Unlabeled").sum()
         kpi_card(cols[3], "Unlabeled scored", f"{n_unlab:,}",
                  helper="HCPs with no ATSEG, scored by the model",
-                 style="accent", icon="❓",
+                 style="accent", icon="",
                  status="info", status_label="Predicted")
 
         st.markdown("&nbsp;")
