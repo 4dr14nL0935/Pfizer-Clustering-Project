@@ -965,6 +965,134 @@ st.markdown(
         zoom: 0.9;
     }
 
+    /* ────────────────────────────────────────────────────────────
+       Animations — used across the app
+    ──────────────────────────────────────────────────────────── */
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: .35; transform: scale(1); }
+        50%      { opacity: 1;   transform: scale(1.15); }
+    }
+    @keyframes shimmer {
+        0%   { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+    }
+    @keyframes progress {
+        0%   { width: 0%; }
+        50%  { width: 70%; }
+        100% { width: 100%; }
+    }
+
+    /* Style Streamlit's built-in spinner with brand colors + bigger ring */
+    [data-testid="stSpinner"] {
+        text-align: center;
+    }
+    [data-testid="stSpinner"] > div {
+        border-color: #0072CE transparent transparent transparent !important;
+        border-width: 4px !important;
+        animation-duration: 0.9s !important;
+    }
+    [data-testid="stSpinner"] + div,
+    [data-testid="stSpinner"] p {
+        color: #003B71 !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+    }
+
+    /* ── Custom branded loader (overlay) ──────────────────────── */
+    .brand-loader {
+        text-align: center;
+        padding: 36px 28px;
+        background: white;
+        border-radius: 18px;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 12px 32px rgba(15,23,42,0.10);
+        max-width: 460px;
+        margin: 60px auto;
+        animation: slideUp 0.4s ease;
+    }
+    .brand-loader-ring {
+        width: 68px; height: 68px;
+        border: 5px solid #DBEAFE;
+        border-top-color: #0072CE;
+        border-right-color: #00B5E2;
+        border-radius: 50%;
+        margin: 0 auto 18px auto;
+        animation: spin 0.9s linear infinite;
+    }
+    .brand-loader-title {
+        font-size: 16px;
+        font-weight: 800;
+        color: #003B71;
+        letter-spacing: 0.4px;
+        margin-bottom: 4px;
+    }
+    .brand-loader-sub {
+        font-size: 12px;
+        color: #64748B;
+        font-weight: 500;
+    }
+    .brand-loader-bar {
+        margin: 22px auto 0 auto;
+        max-width: 240px;
+        height: 6px;
+        background: #EEF2F7;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .brand-loader-bar > span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #0072CE, #00B5E2);
+        border-radius: 999px;
+        animation: progress 1.8s ease-in-out infinite;
+    }
+    .brand-loader-dots {
+        display: inline-flex; gap: 6px;
+        margin-top: 12px;
+    }
+    .brand-loader-dots > span {
+        width: 6px; height: 6px;
+        background: #0072CE;
+        border-radius: 50%;
+        animation: pulse 1.2s ease-in-out infinite;
+    }
+    .brand-loader-dots > span:nth-child(2) { animation-delay: .15s; }
+    .brand-loader-dots > span:nth-child(3) { animation-delay: .30s; }
+    .brand-loader-dots > span:nth-child(4) { animation-delay: .45s; }
+
+    /* Shimmer skeleton for plotly chart placeholders */
+    .skeleton {
+        background: linear-gradient(90deg,
+            rgba(241,245,249,0.6) 0%,
+            rgba(226,232,240,0.9) 50%,
+            rgba(241,245,249,0.6) 100%);
+        background-size: 1000px 100%;
+        animation: shimmer 1.5s linear infinite;
+        border-radius: 14px;
+    }
+    .skeleton-chart {
+        height: 320px;
+        margin-bottom: 14px;
+    }
+
+    /* Fade-in everything that's a top-level section header */
+    .section-header {
+        animation: slideUp 0.35s ease both;
+    }
+
     /* Hide streamlit chrome */
     #MainMenu, footer { visibility: hidden; }
     header[data-testid="stHeader"] {
@@ -978,6 +1106,25 @@ st.markdown(
     }
     </style>
     """, unsafe_allow_html=True)
+
+
+def brand_loader(title: str = "Loading", sub: str = ""):
+    """Return a context manager that shows a branded loading card while a
+    block of code runs (replaces st.spinner for the heavier waits).
+    """
+    placeholder = st.empty()
+    html = (
+        f'<div class="brand-loader">'
+        f'<div class="brand-loader-ring"></div>'
+        f'<div class="brand-loader-title">{title}</div>'
+        f'<div class="brand-loader-sub">{sub}</div>'
+        f'<div class="brand-loader-bar"><span></span></div>'
+        f'<div class="brand-loader-dots">'
+        f'<span></span><span></span><span></span><span></span>'
+        f'</div></div>'
+    )
+    placeholder.markdown(html, unsafe_allow_html=True)
+    return placeholder
 
 # ─────────────────────────────────────────────────────────────────────────
 # Plotly theme helper
@@ -1687,6 +1834,841 @@ MODEL_LABELS = {
 }
 MODEL_LABELS_SHORT = {"ord": "Ordinal", "amx": "Argmax"}
 
+
+# ─────────────────────────────────────────────────────────────────────────
+# Cover / landing page — shown before the dashboard
+# ─────────────────────────────────────────────────────────────────────────
+def get_image_base64(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+# Init session state for the cover gate
+if "entered_dashboard" not in st.session_state:
+    st.session_state.entered_dashboard = False
+
+
+def _render_cover():
+    """Splash / landing page rendered before the dashboard.
+
+    Shows: brand, project description, predicted-segment overview
+    (live model output), and an arrow CTA to enter the dashboard.
+    """
+
+    # Hide the sidebar entirely while the cover is showing — it would just
+    # add visual noise to a landing page.
+    st.markdown(
+        """
+        <style>
+        section[data-testid="stSidebar"] { display: none !important; }
+        [data-testid="collapsedControl"] { display: none !important; }
+        /* While on the cover, narrow the main container so EVERY block —
+           including Streamlit-rendered widgets like st.columns and plotly
+           charts — shares the same left/right margins as our HTML cards. */
+        section[data-testid="stMain"] .block-container {
+            max-width: 1100px !important;
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+        }
+        .cover-wrap {
+            width: 100%;
+            margin: 12px auto 0 auto;
+            animation: slideUp 0.45s ease;
+        }
+        .cover-hero {
+            position: relative;
+            background:
+                radial-gradient(ellipse at top right, rgba(0,181,226,0.30) 0%, transparent 60%),
+                linear-gradient(135deg, #001F3F 0%, #003B71 35%, #0072CE 100%);
+            color: white;
+            padding: 48px 56px 44px 56px;
+            border-radius: 22px;
+            margin-bottom: 28px;
+            box-shadow:
+                0 16px 40px rgba(0, 59, 113, 0.28),
+                0 4px 10px rgba(0, 59, 113, 0.14),
+                inset 0 1px 0 rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+        .cover-hero::before {
+            content: "";
+            position: absolute;
+            top: -40%; right: -10%;
+            width: 520px; height: 520px;
+            background: radial-gradient(circle, rgba(0,181,226,0.32) 0%, transparent 65%);
+            pointer-events: none;
+        }
+        .cover-hero::after {
+            content: "";
+            position: absolute;
+            bottom: -55%; left: 20%;
+            width: 460px; height: 460px;
+            background: radial-gradient(circle, rgba(244,123,32,0.22) 0%, transparent 65%);
+            pointer-events: none;
+        }
+        .cover-content { position: relative; z-index: 1; }
+        .cover-eyebrow {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            opacity: 0.9;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .cover-eyebrow::before {
+            content: "";
+            display: inline-block;
+            width: 36px; height: 2px;
+            background: #00B5E2;
+            border-radius: 2px;
+        }
+        .cover-title {
+            font-size: 44px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1.05;
+            margin: 0 0 10px 0;
+        }
+        .cover-subtitle {
+            font-size: 16px;
+            opacity: 0.88;
+            font-weight: 400;
+            margin: 0 0 6px 0;
+            max-width: 760px;
+            line-height: 1.55;
+        }
+        .cover-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.18);
+            margin: 24px 0 18px 0;
+        }
+        .cover-meta {
+            display: flex; flex-wrap: wrap; gap: 10px;
+        }
+        .cover-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(6px);
+            padding: 8px 16px; border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+        .cover-pill b { color: #FFE7D2; font-weight: 700; }
+
+        /* Section title above the segment cards */
+        .cover-sec-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #003B71;
+            margin: 22px 0 12px 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cover-sec-title::before {
+            content: "";
+            width: 4px; height: 18px; border-radius: 3px;
+            background: linear-gradient(180deg, #0072CE, #00B5E2);
+        }
+
+        /* Segment KPI cards */
+        .seg-stat {
+            background: white;
+            border-radius: 16px;
+            padding: 22px 24px;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 4px 12px rgba(15,23,42,0.04);
+            position: relative;
+            overflow: hidden;
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .seg-stat:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 30px rgba(15,23,42,0.10);
+        }
+        .seg-stat::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 5px;
+        }
+        .seg-stat.SEG_A::before { background: linear-gradient(90deg, #2E6CB0, #0072CE); }
+        .seg-stat.SEG_B::before { background: linear-gradient(90deg, #F47B20, #FDB913); }
+        .seg-stat.SEG_C::before { background: linear-gradient(90deg, #C44E52, #DC2626); }
+        .seg-stat.Unlabeled::before { background: linear-gradient(90deg, #94A3B8, #CBD5E1); }
+        .seg-stat-name {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #64748B;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .seg-stat-value {
+            font-size: 38px;
+            font-weight: 800;
+            color: #0B1B33;
+            line-height: 1.05;
+            letter-spacing: -1px;
+            font-feature-settings: "tnum";
+        }
+        .seg-stat-pct {
+            font-size: 14px;
+            color: #475569;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+        .seg-stat-desc {
+            font-size: 12px;
+            color: #64748B;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        /* Description card */
+        .desc-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #E2E8F0;
+            border-left: 5px solid #0072CE;
+            padding: 24px 28px;
+            box-shadow: 0 4px 14px rgba(15,23,42,0.04);
+            margin-bottom: 8px;
+        }
+        .desc-card h3 {
+            margin: 0 0 10px 0;
+            color: #003B71;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .desc-card p {
+            color: #334155;
+            font-size: 14.5px;
+            line-height: 1.65;
+            margin: 0 0 10px 0;
+        }
+        .desc-card .pillar {
+            display: inline-block;
+            background: #EFF6FF;
+            border: 1px solid #DBEAFE;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            color: #1E40AF;
+            font-weight: 700;
+            margin-right: 6px;
+            margin-top: 4px;
+            letter-spacing: 0.3px;
+        }
+
+        /* Enter button — fully styled by targeting the only button in main */
+        section[data-testid="stMain"] .stButton button {
+            background: linear-gradient(135deg, #003B71 0%, #0072CE 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 999px !important;
+            padding: 18px 42px !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
+            box-shadow: 0 10px 24px rgba(0, 114, 206, 0.30) !important;
+            transition: all .18s ease !important;
+            font-family: 'Inter', sans-serif !important;
+            text-align: center !important;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        section[data-testid="stMain"] .stButton button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 32px rgba(0, 114, 206, 0.45) !important;
+            background: linear-gradient(135deg, #002A52 0%, #005CA8 100%) !important;
+        }
+        section[data-testid="stMain"] .stButton button p {
+            margin: 0 !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            color: white !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── Load data & train (cached) to surface segment counts ──
+    _loader = brand_loader(
+        "Training XGBoost models",
+        "5-fold CV · scoring 20,931 HCPs · computing SHAP · ~60s first run, instant after",
+    )
+    R = train_pipeline(DATASET_NAME)
+    _loader.empty()
+    pred_all = R["full"]["ord"]["pred"]
+    is_lab = R["is_labeled"]
+    n_total = len(R["ids"])
+
+    seg_a_n = int((pred_all == "SEG_A").sum())
+    seg_b_n = int((pred_all == "SEG_B").sum())
+    seg_c_n = int((pred_all == "SEG_C").sum())
+    lab_n   = int(is_lab.sum())
+    unlab_n = int(n_total - lab_n)
+
+    seg_descs = {
+        "SEG_A": "Already strong prescribers — protect & maintain",
+        "SEG_B": "Growth potential — primary targets for engagement",
+        "SEG_C": "High-value prescribers — priority targets",
+    }
+
+    # Inject extra cover-specific styles for the new sections
+    st.markdown(
+        """
+        <style>
+        .cover-section {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+            color: #003B71;
+            margin: 32px 0 12px 4px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .cover-section::before {
+            content: "";
+            width: 4px; height: 18px; border-radius: 3px;
+            background: linear-gradient(180deg, #0072CE, #00B5E2);
+        }
+        .cover-section .count-chip {
+            font-size: 11px; letter-spacing: .4px;
+            background: #EFF6FF; color: #1E40AF;
+            padding: 2px 10px; border-radius: 999px;
+            border: 1px solid #DBEAFE; font-weight: 700;
+        }
+
+        /* Two-column model card */
+        .model-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 4px 14px rgba(15,23,42,0.05);
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+        .model-card-header {
+            background: linear-gradient(135deg, #003B71, #0072CE);
+            color: white;
+            padding: 18px 24px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .model-card-icon {
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .model-card-title {
+            font-size: 18px; font-weight: 800;
+            line-height: 1.15;
+            margin: 0;
+        }
+        .model-card-sub {
+            font-size: 12px; opacity: 0.86;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            margin-top: 2px;
+        }
+        .model-card-body {
+            padding: 22px 26px 24px 26px;
+        }
+        .model-card-body p {
+            color: #334155;
+            font-size: 14px;
+            line-height: 1.7;
+            margin: 0 0 14px 0;
+        }
+        .model-card-body p:last-child { margin-bottom: 0; }
+        .model-card-body b { color: #003B71; }
+
+        /* Pipeline steps */
+        .pipeline {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        @media(max-width: 1100px){ .pipeline { grid-template-columns: repeat(2, 1fr); } }
+        .pipe-step {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #E2E8F0;
+            padding: 16px 18px;
+            box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .pipe-step:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(15,23,42,0.08);
+        }
+        .pipe-step::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #0072CE, #00B5E2);
+            border-radius: 12px 12px 0 0;
+        }
+        .pipe-num {
+            width: 24px; height: 24px;
+            background: linear-gradient(135deg, #003B71, #0072CE);
+            color: white;
+            border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .pipe-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #003B71;
+            margin: 0 0 4px 0;
+        }
+        .pipe-desc {
+            font-size: 11.5px;
+            color: #64748B;
+            line-height: 1.5;
+        }
+
+        /* Tabs preview */
+        .tabs-preview {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            position: relative;        /* anchor for tooltips */
+            overflow: visible;
+        }
+        @media(max-width: 1100px){ .tabs-preview { grid-template-columns: repeat(3, 1fr); } }
+        @media(max-width: 720px) { .tabs-preview { grid-template-columns: repeat(2, 1fr); } }
+
+        .tab-card {
+            position: relative;        /* anchor the popup to the card */
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 14px 14px 12px 14px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+            transition: all .15s ease;
+            cursor: help;
+        }
+        .tab-card:hover {
+            transform: translateY(-2px);
+            border-color: #BFDBFE;
+            background: linear-gradient(180deg, #F8FAFC, white);
+            box-shadow: 0 8px 20px rgba(15,23,42,0.10);
+            z-index: 10;               /* sit above neighbours so popup wins */
+        }
+        .tab-card-icon {
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+        .tab-card-name {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #003B71;
+            letter-spacing: 0.3px;
+        }
+
+        /* ── Hover popup for each tab card ───────────────────────── */
+        .tab-card-popup {
+            position: absolute;
+            bottom: calc(100% + 12px);
+            left: 50%;
+            transform: translateX(-50%) translateY(6px);
+            min-width: 240px;
+            max-width: 280px;
+            background: white;
+            color: #0B1B33;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            box-shadow:
+                0 12px 28px rgba(15,23,42,0.18),
+                0 3px 8px rgba(15,23,42,0.08);
+            font-size: 11.5px;
+            line-height: 1.55;
+            text-align: left;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .18s ease, transform .18s ease,
+                          visibility .18s ease;
+            z-index: 100;
+        }
+        .tab-card-popup::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 12px; height: 12px;
+            background: white;
+            border-right: 1px solid #E2E8F0;
+            border-bottom: 1px solid #E2E8F0;
+            margin-top: -6px;
+        }
+        .tab-card-popup-title {
+            display: block;
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #003B71;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .tab-card-popup-text {
+            color: #475569;
+        }
+        .tab-card:hover .tab-card-popup {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        /* Flip the first card's popup to the right so it doesn't get clipped
+           by the container's left edge, and the last card's popup to the
+           left so it doesn't get clipped by the right edge. */
+        .tabs-preview .tab-card:first-child .tab-card-popup {
+            left: 0;
+            transform: translateY(6px);
+        }
+        .tabs-preview .tab-card:first-child:hover .tab-card-popup {
+            transform: translateY(0);
+        }
+        .tabs-preview .tab-card:first-child .tab-card-popup::after {
+            left: 20%;
+        }
+        .tabs-preview .tab-card:last-child .tab-card-popup {
+            left: auto;
+            right: 0;
+            transform: translateY(6px);
+        }
+        .tabs-preview .tab-card:last-child:hover .tab-card-popup {
+            transform: translateY(0);
+        }
+        .tabs-preview .tab-card:last-child .tab-card-popup::after {
+            left: 80%;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ─── HERO ─── (logo + title on the same row)
+    try:
+        _logo_b64 = get_image_base64("logo3.png")
+        _logo_html = (
+            f'<div style="display:inline-flex;align-items:center;'
+            f'justify-content:center;width:88px;height:88px;'
+            f'background:rgba(255,255,255,0.95);'
+            f'border:1px solid rgba(255,255,255,0.35);'
+            f'border-radius:20px;padding:10px;'
+            f'box-shadow:0 6px 18px rgba(0,0,0,0.18);'
+            f'flex-shrink:0;">'
+            f'<img src="data:image/png;base64,{_logo_b64}" '
+            f'style="width:100%;height:auto;display:block;" />'
+            f'</div>'
+        )
+    except Exception:
+        _logo_html = ""
+
+    st.markdown(
+        f"""
+        <div class="cover-wrap">
+          <div class="cover-hero" style="padding:40px 56px;">
+            <div class="cover-content" style="display:flex;align-items:center;
+                                                gap:28px;flex-wrap:wrap;">
+              {_logo_html}
+              <div class="cover-title" style="font-size:48px;margin:0;">
+                Prescriber Probability Engine
+              </div>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ═══════════════════════════════════════════════════════════════
+    # 1. MODEL DESCRIPTION (moved here from the sidebar tooltip)
+    # ═══════════════════════════════════════════════════════════════
+    st.markdown(
+        """
+        <div class="cover-wrap">
+          <div class="cover-section">About the Model</div>
+          <div class="model-card">
+            <div class="model-card-header">
+              <div class="model-card-icon">🧠</div>
+              <div>
+                <div class="model-card-title">Ordinal XGBoost Framework</div>
+                <div class="model-card-sub">Business-calibrated · v3.2 · SHAP-explainable</div>
+              </div>
+            </div>
+            <div class="model-card-body">
+              <p>
+                The final model is an <b>ordinal XGBoost framework</b> designed
+                to segment healthcare providers into three categories based on
+                their likelihood of prescribing Velsipity: <b>SEG_A</b>,
+                <b>SEG_B</b>, and <b>SEG_C</b>. Instead of using a traditional
+                multiclass classifier, the system models the problem as an
+                <b>ordered classification task</b> through two sequential binary
+                XGBoost models, allowing it to better capture the natural
+                progression between physician segments. The model incorporates
+                extensive feature engineering — prescription activity, sales
+                representative interactions, drug sample distribution,
+                competitor prescriptions, ratio-based metrics, and logarithmic
+                transformations — to improve predictive performance and
+                robustness.
+              </p>
+              <p>
+                To align the predictions with Pfizer's commercial objectives,
+                the model applies <b>custom business-calibrated thresholds</b>
+                and a dominance rule that prioritises the identification of
+                high-value prescribers while minimising costly false negatives.
+                The final system also integrates <b>SHAP explainability</b> to
+                provide transparent feature-level insights for each prediction
+                and includes a <b>conversion analysis module</b> capable of
+                identifying SEG_B physicians with strong potential to
+                transition into SEG_C. Overall, the model functions not only
+                as a predictive tool, but also as a strategic decision-support
+                system for physician targeting and resource optimisation.
+              </p>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ═══════════════════════════════════════════════════════════════
+    # 2. HCPs Classified per Segment — KPI cards + donut side by side
+    # ═══════════════════════════════════════════════════════════════
+    st.markdown(
+        f'<div class="cover-wrap">'
+        f'<div class="cover-section">HCPs Classified per Segment '
+        f'<span class="count-chip">{n_total:,} total</span></div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    def _seg_html(seg, count, total, desc):
+        pct = count / max(total, 1) * 100
+        return (
+            f'<div class="seg-stat {seg}">'
+            f'<div class="seg-stat-name">{seg.replace("_", " ")}</div>'
+            f'<div class="seg-stat-value">{count:,}</div>'
+            f'<div class="seg-stat-pct">{pct:.1f}% of {total:,} HCPs</div>'
+            f'<div class="seg-stat-desc">{desc}</div>'
+            f'</div>'
+        )
+
+    left, right = st.columns([3, 2])
+    with left:
+        # Vertical stack of segment cards
+        st.markdown(_seg_html("SEG_A", seg_a_n, n_total, seg_descs["SEG_A"]),
+                     unsafe_allow_html=True)
+        st.markdown(_seg_html("SEG_B", seg_b_n, n_total, seg_descs["SEG_B"]),
+                     unsafe_allow_html=True)
+        st.markdown(_seg_html("SEG_C", seg_c_n, n_total, seg_descs["SEG_C"]),
+                     unsafe_allow_html=True)
+        if unlab_n > 0:
+            st.markdown(
+                f'<div style="font-size:12px;color:#64748B;'
+                f'padding:14px 4px 4px 4px;line-height:1.55;">'
+                f'<b style="color:#003B71">{lab_n:,}</b> HCPs have '
+                f'ground-truth ATSEG labels · '
+                f'<b style="color:#003B71">{unlab_n:,}</b> were scored '
+                f'exclusively by the model.'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    with right:
+        df_seg = pd.DataFrame({
+            "Segment": ["SEG_A", "SEG_B", "SEG_C"],
+            "HCPs":    [seg_a_n, seg_b_n, seg_c_n],
+        })
+        fig = go.Figure(data=[go.Pie(
+            labels=df_seg["Segment"], values=df_seg["HCPs"],
+            hole=0.64,
+            marker=dict(
+                colors=[SEG_COLORS["SEG_A"], SEG_COLORS["SEG_B"],
+                          SEG_COLORS["SEG_C"]],
+                line=dict(color="white", width=3),
+            ),
+            textinfo="label+percent",
+            textfont=dict(size=13, color="white",
+                            family="Inter, sans-serif"),
+            hovertemplate=("<b>%{label}</b><br>%{value:,} HCPs<br>%{percent}"
+                            "<extra></extra>"),
+        )])
+        fig.update_layout(
+            annotations=[dict(
+                text=f"<b>{n_total:,}</b><br><span style='font-size:12px;"
+                     f"color:#64748B'>HCPs scored</span>",
+                x=0.5, y=0.5, font_size=24,
+                font=dict(color="#003B71", family="Inter, sans-serif"),
+                showarrow=False,
+            )],
+            showlegend=False,
+            margin=dict(l=0, r=0, t=10, b=10),
+            height=430,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ═══════════════════════════════════════════════════════════════
+    # 3. How it works — 4-step pipeline
+    # ═══════════════════════════════════════════════════════════════
+    st.markdown(
+        '<div class="cover-wrap">'
+        '<div class="cover-section">How the engine works</div>'
+        '<div class="pipeline">'
+        '<div class="pipe-step">'
+        '<div class="pipe-num">1</div>'
+        '<div class="pipe-title">Engineer features</div>'
+        '<div class="pipe-desc">'
+        '10 ratio features, brand diversity, engagement totals, '
+        'log-transforms — all derived from raw doctor data.'
+        '</div></div>'
+
+        '<div class="pipe-step">'
+        '<div class="pipe-num">2</div>'
+        '<div class="pipe-title">Two-stage XGBoost</div>'
+        '<div class="pipe-desc">'
+        'Model A learns P(≥B). Model B learns P(≥C) with SEG_C '
+        'samples weighted 2× to prevent under-prediction.'
+        '</div></div>'
+
+        '<div class="pipe-step">'
+        '<div class="pipe-num">3</div>'
+        '<div class="pipe-title">Calibrated decision</div>'
+        '<div class="pipe-desc">'
+        'P(A) ≥ 0.70 → A · P(C) ≥ 0.30 → C · P(C) &gt; P(B) → C · '
+        'otherwise B. Tuned to minimise C→A misclassifications.'
+        '</div></div>'
+
+        '<div class="pipe-step">'
+        '<div class="pipe-num">4</div>'
+        '<div class="pipe-title">Explain & act</div>'
+        '<div class="pipe-desc">'
+        'SHAP highlights drivers per HCP. Counterfactual simulation '
+        'shows how many B doctors flip to C under engagement deltas.'
+        '</div></div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ═══════════════════════════════════════════════════════════════
+    # 4. Inside the dashboard — 7 tab teaser (with hover popups)
+    # ═══════════════════════════════════════════════════════════════
+    tabs_meta = [
+        ("🔍", "Data Overview",
+         "ATSEG distribution by segment, histograms and box plots of the "
+         "key prescribing features broken down by SEG_A / SEG_B / SEG_C."),
+        ("📈", "Performance & CIs",
+         "Confusion matrices (counts + row-normalised), per-segment "
+         "precision & recall, and the 95% confidence-interval section: "
+         "mean CI widths per segment, distribution histogram, box plot "
+         "by predicted class, and the most uncertain HCPs to review."),
+        ("🌐", "Probability Map",
+         "Interactive 3D scatter of P(A) · P(B) · P(C) for every HCP, "
+         "coloured by predicted or true segment. Includes a live HCP "
+         "search box that highlights one point with a hover-style tooltip."),
+        ("🔬", "Doctor Explorer",
+         "Per-HCP profile: ATSEG label vs model prediction, probability "
+         "breakdown, per-HCP counterfactual sliders, 95% CIs, SHAP top "
+         "features, prescribing profile table, and the individual radar "
+         "with multiple scaling options."),
+        ("🎯", "Conversion Strategy",
+         "Predicted-SEG_B doctors closest to SEG_C, ranked by P(C), with "
+         "the engineered-feature gaps that hold each one back and the "
+         "single top actionable lever per candidate."),
+        ("🔮", "Counterfactual",
+         "Simulates 10 engagement deltas (+1, +2, +3, +5 visits, +1/+2 "
+         "samples, combined, → SEG_C median) on the SEG_B universe. "
+         "Stacked-bar scenario impact, diminishing-returns sweep, "
+         "P(C) distribution shift, flipper vs stayer profile, and a "
+         "downloadable list of easy-win HCPs."),
+        ("📋", "Predictions Table",
+         "Full sortable table of every HCP — true ATSEG, predicted "
+         "segment, P(A)/P(B)/P(C) with progress-bar rendering, CI lo/hi "
+         "bounds per class, max CI width column, an uncertainty filter, "
+         "and a one-click CSV export."),
+    ]
+    tabs_html = "".join(
+        f'<div class="tab-card">'
+        f'<div class="tab-card-icon">{icon}</div>'
+        f'<div class="tab-card-name">{name}</div>'
+        f'<div class="tab-card-popup">'
+        f'<span class="tab-card-popup-title">{icon}  {name}</span>'
+        f'<div class="tab-card-popup-text">{desc}</div>'
+        f'</div>'
+        f'</div>'
+        for icon, name, desc in tabs_meta
+    )
+    st.markdown(
+        f'<div class="cover-wrap">'
+        f'<div class="cover-section">Inside the dashboard</div>'
+        f'<div class="tabs-preview">{tabs_html}</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # ─── Enter button (the requested arrow) ───
+    # Use an on_click CALLBACK to flip session_state BEFORE the script
+    # reruns. With this pattern Streamlit performs a single clean rerun
+    # (cover is skipped because state is already True on next execution).
+    # The previous `set state + st.rerun()` inside the click branch
+    # produced a double-rerun, briefly leaving the cover content in the
+    # DOM without its CSS while the dashboard re-rendered.
+    def _enter_dashboard_cb():
+        st.session_state.entered_dashboard = True
+
+    st.markdown('<div style="height:18px;"></div>', unsafe_allow_html=True)
+    bcol_l, bcol_m, bcol_r = st.columns([1, 1, 1])
+    with bcol_m:
+        st.button("Enter Dashboard  →", key="enter_dashboard_btn",
+                   on_click=_enter_dashboard_cb,
+                   use_container_width=True)
+
+    # Footer credit
+    st.markdown(
+        '<div style="text-align:center;color:#94A3B8;font-size:11px;'
+        'margin-top:30px;letter-spacing:0.5px;">'
+        'PFIZER · COMMERCIAL ANALYTICS · Built with Streamlit & XGBoost · '
+        'Random seed locked at 42'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# Render cover and stop the rest of the script from drawing.
+# The cover renders inside a single placeholder so that when the user
+# clicks "Enter Dashboard" and the script reruns, no stale cover DOM
+# (text without styling) can linger while the dashboard re-renders.
+if not st.session_state.entered_dashboard:
+    _cover_slot = st.empty()
+    with _cover_slot.container():
+        _render_cover()
+    st.stop()
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # Sidebar
 # ─────────────────────────────────────────────────────────────────────────
@@ -1838,18 +2820,126 @@ st.sidebar.markdown(
     '</div>',
     unsafe_allow_html=True,
 )
+# Inject technical-spec tooltip styles (only once, scoped to this block)
+st.sidebar.markdown(
+    """
+    <style>
+    .tech-section {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #003B71;
+        font-weight: 800;
+        margin: 8px 0 4px 0;
+        padding-bottom: 3px;
+        border-bottom: 1px solid #E2E8F0;
+    }
+    .tech-section:first-child { margin-top: 0; }
+    .tech-row {
+        display: flex; justify-content: space-between;
+        align-items: center;
+        padding: 1px 0;
+        font-size: 10px;
+        color: #334155;
+        line-height: 1.35;
+    }
+    .tech-row code {
+        background: #F1F5F9;
+        color: #0B1B33;
+        font-family: 'Inter', monospace;
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 0px 5px;
+        border-radius: 3px;
+        border: 1px solid #E2E8F0;
+        line-height: 1.4;
+    }
+    /* 2-column hyperparameter grid keeps the popup short */
+    .tech-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 12px;
+        row-gap: 1px;
+    }
+    .tech-cascade {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 6px;
+        padding: 6px 8px;
+        font-family: 'Inter', monospace;
+        font-size: 9.5px;
+        color: #0B1B33;
+        line-height: 1.55;
+        margin-top: 3px;
+    }
+    .tech-cascade b { color: #003B71; }
+    .tech-cascade .arrow { color: #94A3B8; margin: 0 3px; }
+    .sb-ds-tooltip.tech-tooltip .ds-tooltip-title {
+        font-size: 11px !important;
+        margin-bottom: 6px !important;
+        padding-bottom: 4px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Compact technical-specs tooltip — replaces the long-form description that
+# now lives on the cover page.
 _model_tooltip_html = (
-    f'<div class="sb-ds-tooltip">'
-    f'<div class="ds-tooltip-title">Ordinal XGBoost Framework</div>'
-    f'<div class="ds-step-text" style="margin-bottom: 10px;">The final model is an <b>ordinal XGBoost framework</b> designed to segment healthcare providers into three categories based on their likelihood of prescribing Velsipity: SEG_A, SEG_B, and SEG_C. Instead of using a traditional multiclass classifier, the system models the problem as an ordered classification task through <b>two sequential binary XGBoost models</b>, allowing it to better capture the natural progression between physician segments. The model incorporates extensive feature engineering, including prescription activity, sales representative interactions, drug sample distribution, competitor prescriptions, ratio-based metrics, and logarithmic transformations to improve predictive performance and robustness.</div>'
-    f'<div class="ds-step-text">To align the predictions with Pfizer’s commercial objectives, the model applies <b>custom business-calibrated thresholds</b> and a dominance rule that prioritizes the identification of high-value prescribers while minimizing costly false negatives. The final system also integrates <b>SHAP explainability</b> to provide transparent feature-level insights for each prediction and includes a <b>conversion analysis module</b> capable of identifying SEG_B physicians with strong potential to transition into SEG_C. Overall, the model functions not only as a predictive tool, but also as a strategic decision-support system for physician targeting and resource optimization.</div>'
-    f'</div>'
+    '<div class="sb-ds-tooltip tech-tooltip" '
+    'style="width:280px;padding:10px 12px;">'
+    '<div class="ds-tooltip-title">Model Technical Specs</div>'
+
+    # Architecture (in a 2-col grid)
+    '<div class="tech-section">Architecture</div>'
+    '<div class="tech-grid">'
+    '<div class="tech-row"><span>Type</span><code>Ordinal XGB</code></div>'
+    '<div class="tech-row"><span>Stages</span><code>2 binary</code></div>'
+    '<div class="tech-row"><span>Stage 1</span><code>P(≥B)</code></div>'
+    '<div class="tech-row"><span>Stage 2</span><code>P(≥C)</code></div>'
+    '</div>'
+
+    # Hyperparameters (2-col grid)
+    '<div class="tech-section">Hyperparameters</div>'
+    '<div class="tech-grid">'
+    '<div class="tech-row"><span>n_est.</span><code>800</code></div>'
+    '<div class="tech-row"><span>depth</span><code>5</code></div>'
+    '<div class="tech-row"><span>lr</span><code>0.04</code></div>'
+    '<div class="tech-row"><span>subsamp</span><code>0.85</code></div>'
+    '<div class="tech-row"><span>colsamp</span><code>0.7</code></div>'
+    '<div class="tech-row"><span>min_child</span><code>3</code></div>'
+    '<div class="tech-row"><span>α / λ</span><code>0.1/1.0</code></div>'
+    '<div class="tech-row"><span>tree</span><code>hist</code></div>'
+    '<div class="tech-row"><span>SEG_C wt</span><code>×2.0</code></div>'
+    '<div class="tech-row"><span>seed</span><code>42</code></div>'
+    '</div>'
+
+    # Decision cascade
+    '<div class="tech-section">Decision Cascade</div>'
+    '<div class="tech-cascade">'
+    'if P(A)≥<b>0.70</b><span class="arrow">→</span>A<br>'
+    'elif P(C)≥<b>0.30</b><span class="arrow">→</span>C<br>'
+    'elif P(C)&gt;P(B)<span class="arrow">→</span>C<br>'
+    'else<span class="arrow">→</span>B'
+    '</div>'
+
+    # Training & evaluation (2-col)
+    '<div class="tech-section">Training & evaluation</div>'
+    '<div class="tech-grid">'
+    '<div class="tech-row"><span>CV</span><code>5-fold</code></div>'
+    '<div class="tech-row"><span>CIs</span><code>μ±1.96σ</code></div>'
+    '<div class="tech-row"><span>XAI</span><code>SHAP P≥C</code></div>'
+    '<div class="tech-row"><span>Cls. wt.</span><code>balanced</code></div>'
+    '</div>'
+
+    '</div>'
 )
 _model_meta_html = (
-    f'<div class="sb-ds-meta-row">'
-    f'<span class="sb-ds-meta-text">Business Calibrated · SHAP</span>'
-    f'<div class="sb-ds-info">+{_model_tooltip_html}</div>'
-    f'</div>'
+    '<div class="sb-ds-meta-row">'
+    '<span class="sb-ds-meta-text">Business Calibrated · SHAP</span>'
+    '<div class="sb-ds-info">+' + _model_tooltip_html + '</div>'
+    '</div>'
 )
 st.sidebar.markdown(_model_meta_html, unsafe_allow_html=True)
 
@@ -1897,8 +2987,12 @@ st.markdown(
 # ─────────────────────────────────────────────────────────────────────────
 # Train pipeline (cached)
 # ─────────────────────────────────────────────────────────────────────────
-with st.spinner("Training XGBoost models (cached after first run)..."):
-    R = train_pipeline(dataset)
+_pl_loader = brand_loader(
+    "Loading dashboard",
+    "Reading cached model · scoring HCPs · preparing visualisations",
+)
+R = train_pipeline(dataset)
+_pl_loader.empty()
 
 # ─────────────────────────────────────────────────────────────────────────
 # Context strip
