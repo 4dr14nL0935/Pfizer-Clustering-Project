@@ -1019,30 +1019,13 @@ st.markdown(
 
     /* ────────────────────────────────────────────────────────────
        Effective 90% zoom on the MAIN content area only.
-       The dashboard was designed at 90% browser zoom — this CSS
-       reproduces those proportions at 100% so users don't have to
-       remember to zoom out manually.
-
-       Notes:
-         · `zoom: 0.9` is supported by Chromium, Safari, and modern
-           Firefox; degrades gracefully on older browsers.
-         · We bump `max-width` so the horizontal space freed by the
-           scale is consumed by the content instead of leaving a wide
-           empty margin.
-         · The sidebar is NOT scaled — it already feels right at full
-           size, and shrinking it would crowd the controls.
-         · `!important` is used because some downstream cards
-           (cover, modals, plotly wrappers) re-declare `.block-container`
-           and would otherwise wipe the zoom.
+       Reproduces the "Ctrl + −" feel without forcing the user to
+       zoom out manually.  Sidebar stays at native size.
     ──────────────────────────────────────────────────────────── */
-    section[data-testid="stMain"] .block-container,
-    section[data-testid="stMain"] > div,
-    [data-testid="stMain"] .block-container {
+    section[data-testid="stMain"] .block-container {
         zoom: 0.9 !important;
         max-width: 1600px;
     }
-    /* Streamlit dialog modal renders outside .main — scale it too so
-       the popup proportions match the rest of the UI. */
     [data-testid="stDialog"], [role="dialog"] {
         zoom: 0.9 !important;
     }
@@ -1954,9 +1937,9 @@ def _render_cover():
         /* While on the cover, narrow the main container so EVERY block —
            including Streamlit-rendered widgets like st.columns and plotly
            charts — shares the same left/right margins as our HTML cards.
-           Preserve the 90% zoom from the global stylesheet. */
+           Zoom is handled globally at the stAppViewContainer level, so we
+           don't redeclare it here (would compound to 0.81). */
         section[data-testid="stMain"] .block-container {
-            zoom: 0.9 !important;
             max-width: 1100px !important;
             padding-left: 1.5rem !important;
             padding-right: 1.5rem !important;
@@ -2944,99 +2927,114 @@ st.sidebar.markdown(
     .tech-row {
         display: flex; justify-content: space-between;
         align-items: center;
-        padding: 1px 0;
-        font-size: 10px;
+        padding: 2px 0;
+        font-size: 10.5px;
         color: #334155;
-        line-height: 1.35;
+        line-height: 1.4;
+        gap: 8px;
+        min-width: 0;
+    }
+    .tech-row > span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .tech-row code {
         background: #F1F5F9;
         color: #0B1B33;
         font-family: 'Inter', monospace;
-        font-size: 9.5px;
+        font-size: 10px;
         font-weight: 700;
-        padding: 0px 5px;
-        border-radius: 3px;
+        padding: 1px 6px;
+        border-radius: 4px;
         border: 1px solid #E2E8F0;
         line-height: 1.4;
+        flex-shrink: 0;
     }
-    /* 2-column hyperparameter grid keeps the popup short */
+    /* 4-column grid — wider popup means every param has its own slot */
     .tech-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        column-gap: 12px;
-        row-gap: 1px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        column-gap: 14px;
+        row-gap: 4px;
+    }
+    .tech-grid.two-col {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .tech-cascade {
         background: #F8FAFC;
         border: 1px solid #E2E8F0;
         border-radius: 6px;
-        padding: 6px 8px;
+        padding: 8px 10px;
         font-family: 'Inter', monospace;
-        font-size: 9.5px;
+        font-size: 10.5px;
         color: #0B1B33;
-        line-height: 1.55;
-        margin-top: 3px;
+        line-height: 1.7;
+        margin-top: 4px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 14px;
+        row-gap: 4px;
     }
     .tech-cascade b { color: #003B71; }
-    .tech-cascade .arrow { color: #94A3B8; margin: 0 3px; }
+    .tech-cascade .arrow { color: #94A3B8; margin: 0 4px; }
     .sb-ds-tooltip.tech-tooltip .ds-tooltip-title {
-        font-size: 11px !important;
-        margin-bottom: 6px !important;
-        padding-bottom: 4px !important;
+        font-size: 12px !important;
+        margin-bottom: 8px !important;
+        padding-bottom: 6px !important;
+    }
+    /* Wide tooltip override — make sure it doesn't get clipped */
+    .sb-ds-tooltip.tech-tooltip {
+        max-width: 90vw;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# Compact technical-specs tooltip — replaces the long-form description that
-# now lives on the cover page.
+# Technical-specs tooltip — trimmed to the essentials only.
+# Removed: subsample, colsample_bytree, min_child_weight, reg_alpha/λ,
+# tree_method, class_weight  (regularisation / engine-level knobs that
+# don't change the business interpretation of the model).
 _model_tooltip_html = (
     '<div class="sb-ds-tooltip tech-tooltip" '
-    'style="width:280px;padding:10px 12px;">'
+    'style="width:360px;padding:12px 14px;">'
     '<div class="ds-tooltip-title">Model Technical Specs</div>'
 
-    # Architecture (in a 2-col grid)
+    # Architecture (2x2)
     '<div class="tech-section">Architecture</div>'
-    '<div class="tech-grid">'
+    '<div class="tech-grid two-col">'
     '<div class="tech-row"><span>Type</span><code>Ordinal XGB</code></div>'
     '<div class="tech-row"><span>Stages</span><code>2 binary</code></div>'
     '<div class="tech-row"><span>Stage 1</span><code>P(≥B)</code></div>'
     '<div class="tech-row"><span>Stage 2</span><code>P(≥C)</code></div>'
     '</div>'
 
-    # Hyperparameters (2-col grid)
+    # Hyperparameters — only the ones that drive the business behaviour
     '<div class="tech-section">Hyperparameters</div>'
-    '<div class="tech-grid">'
+    '<div class="tech-grid two-col">'
     '<div class="tech-row"><span>n_est.</span><code>800</code></div>'
     '<div class="tech-row"><span>depth</span><code>5</code></div>'
     '<div class="tech-row"><span>lr</span><code>0.04</code></div>'
-    '<div class="tech-row"><span>subsamp</span><code>0.85</code></div>'
-    '<div class="tech-row"><span>colsamp</span><code>0.7</code></div>'
-    '<div class="tech-row"><span>min_child</span><code>3</code></div>'
-    '<div class="tech-row"><span>α / λ</span><code>0.1/1.0</code></div>'
-    '<div class="tech-row"><span>tree</span><code>hist</code></div>'
     '<div class="tech-row"><span>SEG_C wt</span><code>×2.0</code></div>'
-    '<div class="tech-row"><span>seed</span><code>42</code></div>'
     '</div>'
 
     # Decision cascade
     '<div class="tech-section">Decision Cascade</div>'
     '<div class="tech-cascade">'
-    'if P(A)≥<b>0.70</b><span class="arrow">→</span>A<br>'
-    'elif P(C)≥<b>0.30</b><span class="arrow">→</span>C<br>'
-    'elif P(C)&gt;P(B)<span class="arrow">→</span>C<br>'
-    'else<span class="arrow">→</span>B'
+    '<div>if P(A) ≥ <b>0.70</b><span class="arrow">→</span> A</div>'
+    '<div>elif P(C) ≥ <b>0.30</b><span class="arrow">→</span> C</div>'
+    '<div>elif P(C) &gt; P(B)<span class="arrow">→</span> C</div>'
+    '<div>else<span class="arrow">→</span> B</div>'
     '</div>'
 
-    # Training & evaluation (2-col)
+    # Training & evaluation
     '<div class="tech-section">Training & evaluation</div>'
-    '<div class="tech-grid">'
+    '<div class="tech-grid two-col">'
     '<div class="tech-row"><span>CV</span><code>5-fold</code></div>'
     '<div class="tech-row"><span>CIs</span><code>μ±1.96σ</code></div>'
     '<div class="tech-row"><span>XAI</span><code>SHAP P≥C</code></div>'
-    '<div class="tech-row"><span>Cls. wt.</span><code>balanced</code></div>'
+    '<div class="tech-row"><span>seed</span><code>42</code></div>'
     '</div>'
 
     '</div>'
