@@ -1031,15 +1031,20 @@ st.markdown(
            empty margin.
          · The sidebar is NOT scaled — it already feels right at full
            size, and shrinking it would crowd the controls.
+         · `!important` is used because some downstream cards
+           (cover, modals, plotly wrappers) re-declare `.block-container`
+           and would otherwise wipe the zoom.
     ──────────────────────────────────────────────────────────── */
-    section[data-testid="stMain"] .block-container {
-        zoom: 0.9;
+    section[data-testid="stMain"] .block-container,
+    section[data-testid="stMain"] > div,
+    [data-testid="stMain"] .block-container {
+        zoom: 0.9 !important;
         max-width: 1600px;
     }
     /* Streamlit dialog modal renders outside .main — scale it too so
        the popup proportions match the rest of the UI. */
     [data-testid="stDialog"], [role="dialog"] {
-        zoom: 0.9;
+        zoom: 0.9 !important;
     }
 
     /* ────────────────────────────────────────────────────────────
@@ -1948,8 +1953,10 @@ def _render_cover():
         [data-testid="collapsedControl"] { display: none !important; }
         /* While on the cover, narrow the main container so EVERY block —
            including Streamlit-rendered widgets like st.columns and plotly
-           charts — shares the same left/right margins as our HTML cards. */
+           charts — shares the same left/right margins as our HTML cards.
+           Preserve the 90% zoom from the global stylesheet. */
         section[data-testid="stMain"] .block-container {
+            zoom: 0.9 !important;
             max-width: 1100px !important;
             padding-left: 1.5rem !important;
             padding-right: 1.5rem !important;
