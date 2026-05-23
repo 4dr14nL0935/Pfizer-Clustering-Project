@@ -301,25 +301,54 @@ st.markdown(
         border-radius: 50%; background: currentColor;
     }
 
-    /* ── SECTION HEADER ── */
-    .section-header { margin: 36px 0 18px 0; animation: fadeInSlide 0.5s ease both; }
-    .section-header-row {
-        display: flex; align-items: center; gap: 14px; margin-bottom: 8px;
+    /* ── SECTION HEADER ── (no-emoji, professional look) */
+    .section-header {
+        position: relative;
+        margin: 40px 0 20px 0;
+        padding: 0 0 0 18px;
+        animation: fadeInSlide 0.5s ease both;
     }
-    .section-icon {
-        width: 38px; height: 38px; border-radius: 10px;
-        background: linear-gradient(135deg, #003B71, #0070BF);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 18px; color: white;
-        box-shadow: 0 4px 12px rgba(0,112,191,0.2); flex-shrink: 0;
+    /* Brand vertical accent bar replaces the old icon square */
+    .section-header::before {
+        content: "";
+        position: absolute;
+        left: 0; top: 4px; bottom: 4px;
+        width: 4px;
+        border-radius: 4px;
+        background: linear-gradient(180deg, #003B71 0%, #0070BF 60%, #00B5E2 100%);
+        box-shadow: 0 2px 8px rgba(0, 114, 206, 0.25);
+    }
+    .section-header-row {
+        display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px;
+        flex-wrap: wrap;
+    }
+    .section-eyebrow {
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 1.6px;
+        text-transform: uppercase;
+        color: #0070BF;
+        margin-right: 4px;
     }
     .section-header h2 {
-        margin: 0; color: #0F172A; font-size: 24px;
-        font-weight: 700; letter-spacing: -0.3px;
+        margin: 0; color: #0F172A; font-size: 22px;
+        font-weight: 800; letter-spacing: -0.3px;
+        line-height: 1.2;
     }
     .section-header p {
-        margin: 0 0 0 52px; color: #64748B;
-        font-size: 15px; font-weight: 400;
+        margin: 6px 0 0 0; color: #64748B;
+        font-size: 13.5px; font-weight: 400;
+        line-height: 1.55;
+        max-width: 820px;
+    }
+    /* Decorative underline (replaces the legacy .section-rule div if used) */
+    .section-rule {
+        height: 1px;
+        background: linear-gradient(90deg,
+            rgba(0, 114, 206, 0.35) 0%,
+            rgba(226, 232, 240, 0.6) 30%,
+            transparent 100%);
+        margin-top: 12px;
     }
 
     /* ── SIDEBAR ── */
@@ -522,20 +551,41 @@ st.markdown(
     }
     .context-pill.accent .pill-val { color: #0070BF; }
 
-    /* ── SIDEBAR LABELS ── */
+    /* ── SIDEBAR LABELS ── (no-emoji, professional look) */
     .sb-label {
-        display: flex; align-items: center; gap: 10px; margin: 24px 0 10px 0;
+        display: flex; align-items: center; gap: 10px;
+        margin: 26px 0 10px 0;
+        padding-bottom: 6px;
+        border-bottom: 1px dashed #E2E8F0;
     }
-    .sb-label-bar { width: 3px; height: 18px; border-radius: 999px; flex-shrink: 0; }
-    .sb-label-bar.blue   { background: #0070BF; }
-    .sb-label-bar.orange { background: #F47B20; }
-    .sb-label-bar.purple { background: #7C3AED; }
-    .sb-label-bar.green  { background: #059669; }
+    /* Thicker accent bar with a soft glow — replaces the missing icon */
+    .sb-label-bar {
+        width: 4px; height: 20px; border-radius: 999px;
+        flex-shrink: 0;
+    }
+    .sb-label-bar.blue   {
+        background: linear-gradient(180deg, #003B71, #0070BF);
+        box-shadow: 0 2px 6px rgba(0, 112, 191, 0.30);
+    }
+    .sb-label-bar.orange {
+        background: linear-gradient(180deg, #C2410C, #F47B20);
+        box-shadow: 0 2px 6px rgba(244, 123, 32, 0.30);
+    }
+    .sb-label-bar.purple {
+        background: linear-gradient(180deg, #5B21B6, #7C3AED);
+        box-shadow: 0 2px 6px rgba(124, 58, 237, 0.30);
+    }
+    .sb-label-bar.green  {
+        background: linear-gradient(180deg, #047857, #059669);
+        box-shadow: 0 2px 6px rgba(5, 150, 105, 0.30);
+    }
     .sb-label-text {
-        font-size: 11px; font-weight: 700; text-transform: uppercase;
-        letter-spacing: 1px; color: #0F172A;
+        font-size: 11px; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 1.2px; color: #0F172A;
+        flex: 1;
     }
-    .sb-label-icon { font-size: 14px; margin-right: 2px; color: #64748B; }
+    /* Icon slot — only shown when sb_label() is called with a non-empty icon */
+    .sb-label-icon { font-size: 14px; color: #64748B; }
 
     .sb-current {
         display: flex; align-items: center; justify-content: space-between;
@@ -594,22 +644,49 @@ st.markdown(
         height: 1px; background: rgba(0,0,0,0.06); margin-top: 12px;
     }
 
-    /* ── TABS ── */
+    /* ── TABS ── (no-emoji, professional pills) */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 4px; background: #F1F5F9; padding: 5px;
-        border-radius: 10px; border: 1px solid #E2E8F0;
+        gap: 6px;
+        background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.6);
     }
     .stTabs [data-baseweb="tab"] {
-        background: transparent; border-radius: 8px;
-        color: #64748B; font-weight: 500; font-size: 14px;
-        padding: 10px 18px; transition: all .2s ease;
+        background: transparent;
+        border-radius: 9px;
+        color: #475569;
+        font-weight: 600;
+        font-size: 13.5px;
+        letter-spacing: 0.2px;
+        padding: 11px 22px;
+        transition: all .18s ease;
+        position: relative;
+        border: 1px solid transparent;
     }
-    .stTabs [data-baseweb="tab"]:hover { background: #FFFFFF; color: #0F172A; }
+    .stTabs [data-baseweb="tab"]:hover {
+        background: #EFF6FF;
+        color: #003B71;
+    }
     .stTabs [aria-selected="true"] {
-        background: #FFFFFF !important;
-        color: #0070BF !important;
-        border: 1px solid #DBEAFE !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        background: linear-gradient(180deg, #FFFFFF 0%, #F0F7FF 100%) !important;
+        color: #003B71 !important;
+        font-weight: 800 !important;
+        border: 1px solid #BFDBFE !important;
+        box-shadow: 0 2px 6px rgba(0, 114, 206, 0.12),
+                    0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+    /* Subtle bottom accent on the active tab */
+    .stTabs [aria-selected="true"]::after {
+        content: "";
+        position: absolute;
+        left: 50%; bottom: -2px;
+        transform: translateX(-50%);
+        width: 28px; height: 3px;
+        background: linear-gradient(90deg, #003B71, #0070BF);
+        border-radius: 2px;
     }
     .stTabs [data-baseweb="tab-highlight"] { background: transparent !important; }
 
@@ -1758,12 +1835,22 @@ def kpi_card(col, label, value, helper="", style="", icon="",
     col.markdown(html_content, unsafe_allow_html=True)
 
 
-def section(title, subtitle="", icon=""):
+def section(title, subtitle="", icon="", eyebrow=""):
+    """Render a section header with the new emoji-free professional layout.
+
+    A vertical brand-blue accent bar runs down the left edge; the title
+    sits beside it in dark slate.  An optional `eyebrow` (small uppercase
+    line above the title) lets callers add a discreet context tag.
+    The `icon=` argument is accepted for backwards-compat and ignored.
+    """
+    eyebrow_html = (
+        f'<span class="section-eyebrow">{eyebrow}</span>' if eyebrow else ""
+    )
     sub = f"<p>{subtitle}</p>" if subtitle else ""
     html = (
         f'<div class="section-header">'
         f'<div class="section-header-row">'
-        f'<div class="section-icon">{icon}</div>'
+        f'{eyebrow_html}'
         f'<h2>{title}</h2>'
         f'</div>'
         f'{sub}'
@@ -1787,11 +1874,18 @@ def context_strip(items, accent_index=None):
 
 
 def sb_label(icon, title, color="blue"):
+    """Sidebar group label. `icon` is kept for backwards-compat but is only
+    rendered when non-empty so an empty string doesn't leave a visual gap.
+    The colored vertical bar on the left replaces the missing icon slot."""
+    icon_html = (
+        f'<span class="sb-label-icon">{icon}</span>'
+        if icon and icon.strip() else ""
+    )
     st.sidebar.markdown(
         f"""
         <div class="sb-label">
             <div class="sb-label-bar {color}"></div>
-            <span class="sb-label-icon">{icon}</span>
+            {icon_html}
             <span class="sb-label-text">{title}</span>
         </div>
         """,
@@ -2150,13 +2244,28 @@ def _render_cover():
             display: flex; align-items: center; gap: 14px;
         }
         .model-card-icon {
-            width: 44px; height: 44px;
-            background: rgba(255,255,255,0.18);
-            border: 1px solid rgba(255,255,255,0.25);
+            width: 48px; height: 48px;
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.30);
             border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 22px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.4px;
             flex-shrink: 0;
+            position: relative;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+        }
+        /* Subtle accent corner inside the monogram tile */
+        .model-card-icon::after {
+            content: "";
+            position: absolute;
+            top: 6px; right: 6px;
+            width: 6px; height: 6px;
+            background: #00B5E2;
+            border-radius: 50%;
         }
         .model-card-title {
             font-size: 18px; font-weight: 800;
@@ -2399,7 +2508,7 @@ def _render_cover():
           <div class="cover-section">About the Model</div>
           <div class="model-card">
             <div class="model-card-header">
-              <div class="model-card-icon"></div>
+              <div class="model-card-icon">Pfz</div>
               <div>
                 <div class="model-card-title">Ordinal XGBoost Framework</div>
                 <div class="model-card-sub">Business-calibrated · v3.2 · SHAP-explainable</div>
@@ -2566,34 +2675,34 @@ def _render_cover():
     # 4. Inside the dashboard — 7 tab teaser (with hover popups)
     # ═══════════════════════════════════════════════════════════════
     tabs_meta = [
-        ( "Data Overview",
+        ("🔍", "Data Overview",
          "ATSEG distribution by segment, histograms and box plots of the "
          "key prescribing features broken down by SEG_A / SEG_B / SEG_C."),
-        ( "Performance & CIs",
+        ("📈", "Performance & CIs",
          "Confusion matrices (counts + row-normalised), per-segment "
          "precision & recall, and the 95% confidence-interval section: "
          "mean CI widths per segment, distribution histogram, box plot "
          "by predicted class, and the most uncertain HCPs to review."),
-        ("Probability Map",
+        ("🌐", "Probability Map",
          "Interactive 3D scatter of P(A) · P(B) · P(C) for every HCP, "
          "coloured by predicted or true segment. Includes a live HCP "
          "search box that highlights one point with a hover-style tooltip."),
-        ("Doctor Explorer",
+        ("🔬", "Doctor Explorer",
          "Per-HCP profile: ATSEG label vs model prediction, probability "
          "breakdown, per-HCP counterfactual sliders, 95% CIs, SHAP top "
          "features, prescribing profile table, and the individual radar "
          "with multiple scaling options."),
-        ("Conversion Strategy",
+        ("🎯", "Conversion Strategy",
          "Predicted-SEG_B doctors closest to SEG_C, ranked by P(C), with "
          "the engineered-feature gaps that hold each one back and the "
          "single top actionable lever per candidate."),
-        ("Counterfactual",
+        ("🔮", "Counterfactual",
          "Simulates 10 engagement deltas (+1, +2, +3, +5 visits, +1/+2 "
          "samples, combined, → SEG_C median) on the SEG_B universe. "
          "Stacked-bar scenario impact, diminishing-returns sweep, "
          "P(C) distribution shift, flipper vs stayer profile, and a "
          "downloadable list of easy-win HCPs."),
-        ("Predictions Table",
+        ("📋", "Predictions Table",
          "Full sortable table of every HCP — true ATSEG, predicted "
          "segment, P(A)/P(B)/P(C) with progress-bar rendering, CI lo/hi "
          "bounds per class, max CI width column, an uncertainty filter, "
@@ -2647,13 +2756,12 @@ def _render_cover():
 
 
 # Render cover and stop the rest of the script from drawing.
-# The cover renders inside a single placeholder so that when the user
-# clicks "Enter Dashboard" and the script reruns, no stale cover DOM
-# (text without styling) can linger while the dashboard re-renders.
+# The on_click callback used by the "Enter Dashboard" button already
+# prevents the double-rerun that previously left stale cover content
+# visible — no need to wrap the cover in an st.empty() container, which
+# was breaking widget rendering inside the cover.
 if not st.session_state.entered_dashboard:
-    _cover_slot = st.empty()
-    with _cover_slot.container():
-        _render_cover()
+    _render_cover()
     st.stop()
 
 
