@@ -749,6 +749,126 @@ st.markdown(
     .stAlert { border-radius: 12px !important; }
     .stProgress > div > div > div > div { background: #0070BF !important; }
 
+    /* ────────────────────────────────────────────────────────────
+       Dashboard-wide entrance & transition animations.
+       Anything that materialises inside the main area fades up
+       smoothly instead of popping in.
+    ──────────────────────────────────────────────────────────── */
+
+    /* Every Plotly chart fades up on mount */
+    section[data-testid="stMain"] .stPlotlyChart,
+    section[data-testid="stMain"] [data-testid="stPlotlyChart"] {
+        animation: chartIn 0.55s cubic-bezier(.2, .8, .25, 1) both;
+    }
+    @keyframes chartIn {
+        0%   { opacity: 0; transform: translateY(14px) scale(0.985); }
+        60%  { opacity: 1; }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Dataframes fade in (no movement so the user's scroll is stable) */
+    section[data-testid="stMain"] [data-testid="stDataFrame"],
+    section[data-testid="stMain"] [data-testid="stTable"] {
+        animation: tableIn 0.45s ease-out both;
+    }
+    @keyframes tableIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* KPI card row — stagger so they cascade in */
+    section[data-testid="stMain"] .kpi-card {
+        animation: kpiIn 0.5s cubic-bezier(.2, .8, .25, 1) both;
+    }
+    @keyframes kpiIn {
+        from { opacity: 0; transform: translateY(10px) scale(0.97); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    /* The KPI cards live inside successive st.columns blocks — animate
+       them with increasing delay so they appear left-to-right */
+    section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
+        > [data-testid="column"]:nth-child(1) .kpi-card { animation-delay: 0ms; }
+    section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
+        > [data-testid="column"]:nth-child(2) .kpi-card { animation-delay: 60ms; }
+    section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
+        > [data-testid="column"]:nth-child(3) .kpi-card { animation-delay: 120ms; }
+    section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
+        > [data-testid="column"]:nth-child(4) .kpi-card { animation-delay: 180ms; }
+    section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
+        > [data-testid="column"]:nth-child(5) .kpi-card { animation-delay: 240ms; }
+
+    /* Tab content fades in smoothly when switching tabs */
+    section[data-testid="stMain"] [data-baseweb="tab-panel"] {
+        animation: tabPanelIn 0.35s ease-out both;
+    }
+    @keyframes tabPanelIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Tab switch micro-interaction — quick scale pulse on active */
+    .stTabs [aria-selected="true"] {
+        animation: tabSelect 0.30s cubic-bezier(.2, .8, .25, 1);
+    }
+    @keyframes tabSelect {
+        0%   { transform: scale(0.96); }
+        50%  { transform: scale(1.03); }
+        100% { transform: scale(1); }
+    }
+
+    /* Expander content fades down */
+    section[data-testid="stMain"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+        animation: expandIn 0.30s ease-out both;
+    }
+    @keyframes expandIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Info panels — gentle fade-up */
+    .info-panel { animation: slideUp 0.4s ease both; }
+
+    /* Smooth chart container hover (the lift was previously instant) */
+    .stPlotlyChart {
+        transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+    }
+
+    /* Buttons get a subtle press effect */
+    section[data-testid="stMain"] .stButton button {
+        transition: transform 0.12s ease, box-shadow 0.18s ease,
+                    background 0.18s ease !important;
+    }
+    section[data-testid="stMain"] .stButton button:active {
+        transform: translateY(1px) scale(0.985);
+    }
+
+    /* Inputs get a smooth focus glow */
+    section[data-testid="stMain"] input,
+    section[data-testid="stMain"] textarea,
+    section[data-testid="stMain"] [data-baseweb="select"] > div {
+        transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+
+    /* Sliders get a smooth thumb transition */
+    section[data-testid="stMain"] [data-baseweb="slider"] [role="slider"] {
+        transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+    }
+
+    /* Reduce-motion respect: disable all the entrance animations for
+       users who have prefers-reduced-motion set */
+    @media (prefers-reduced-motion: reduce) {
+        section[data-testid="stMain"] .stPlotlyChart,
+        section[data-testid="stMain"] [data-testid="stDataFrame"],
+        section[data-testid="stMain"] [data-testid="stTable"],
+        section[data-testid="stMain"] .kpi-card,
+        section[data-testid="stMain"] [data-baseweb="tab-panel"],
+        .info-panel,
+        section[data-testid="stMain"] [data-testid="stExpander"]
+            [data-testid="stExpanderDetails"] {
+            animation: none !important;
+        }
+    }
+
     /* ── Dataset card with hover-tooltip "+" icon ── */
     .dataset-card {
         position: relative;
@@ -2770,16 +2890,13 @@ if not st.session_state.entered_dashboard:
 # cover (usually at the very bottom, near the Enter Dashboard button)
 # and the dashboard appears to "open partway down".
 #
-# Implementation notes:
-#   · streamlit.components.v1.html actually loads & executes scripts
-#     inside its iframe — st.markdown with a srcdoc iframe sometimes
-#     does not when display:none is used.
-#   · We attempt the scroll multiple times with increasing delays
-#     because Streamlit re-renders charts/components asynchronously
-#     after the initial paint, which can push the scroll position
-#     back down.
-#   · A MutationObserver also catches subsequent DOM changes for ~3s
-#     so any late-arriving content can't undo the scroll.
+# IMPORTANT: This fires ONLY on the one-shot transition from cover to
+# dashboard.  We do NOT use a MutationObserver — a previous version did,
+# and it interfered with Streamlit's normal scroll handling whenever the
+# user toggled a widget inside any tab (e.g. the Probability Map color
+# radio), making the page jump around.  Three staggered timeouts are
+# enough to catch async-rendered content from the cover→dashboard
+# transition.
 # ─────────────────────────────────────────────────────────────────────────
 if st.session_state.get("scroll_top_after_enter"):
     st.session_state.scroll_top_after_enter = False
@@ -2794,7 +2911,6 @@ if st.session_state.get("scroll_top_after_enter"):
                         w.scrollTo(0, 0);
                         if (d.documentElement) d.documentElement.scrollTop = 0;
                         if (d.body) d.body.scrollTop = 0;
-                        // Streamlit's main scrollable element
                         var main = d.querySelector(
                             'section[data-testid="stMain"]'
                         );
@@ -2805,21 +2921,13 @@ if st.session_state.get("scroll_top_after_enter"):
                         if (app) app.scrollTop = 0;
                     } catch (e) {}
                 }
-
-                // Immediate + staggered attempts (some content renders
-                // asynchronously and would otherwise overwrite the scroll)
+                // Three staggered attempts — covers the typical async
+                // hydration of charts after the initial paint.  No
+                // MutationObserver: subsequent re-renders (radio toggle,
+                // tab switch, slider change) must NOT trigger scroll.
                 jumpTop();
-                [0, 50, 150, 350, 700, 1200, 2000].forEach(function(t) {
-                    setTimeout(jumpTop, t);
-                });
-
-                // Catch late renders for the first 3 seconds
-                try {
-                    var doc = window.parent.document;
-                    var obs = new window.parent.MutationObserver(jumpTop);
-                    obs.observe(doc.body, { childList: true, subtree: true });
-                    setTimeout(function() { obs.disconnect(); }, 3000);
-                } catch (e) {}
+                setTimeout(jumpTop, 100);
+                setTimeout(jumpTop, 500);
             })();
         </script>
         """,
@@ -4430,8 +4538,13 @@ if True:
                 "gaps holding them back",
                 icon="")
 
-        with st.spinner("Computing conversion candidates..."):
-            cand_df, agg_df, c_meds = compute_conversion_strategy(dataset)
+        _cs_loader = brand_loader(
+            "Computing conversion strategy",
+            "Identifying SEG_B doctors closest to SEG_C · "
+            "scoring engagement gaps",
+        )
+        cand_df, agg_df, c_meds = compute_conversion_strategy(dataset)
+        _cs_loader.empty()
 
         # KPI strip
         n_cand = len(cand_df)
@@ -4544,8 +4657,13 @@ if True:
                 "count how many doctors flip from SEG_B to SEG_C.",
                 icon="")
 
-        with st.spinner("Running counterfactual scenarios..."):
-            CF = run_counterfactual_scenarios(dataset)
+        _cf_loader = brand_loader(
+            "Running counterfactual scenarios",
+            "Simulating 10 engagement deltas · re-engineering features · "
+            "re-scoring the SEG_B universe",
+        )
+        CF = run_counterfactual_scenarios(dataset)
+        _cf_loader.empty()
 
         n_seg_b = CF["n_seg_b"]
         sm = CF["summary"]
