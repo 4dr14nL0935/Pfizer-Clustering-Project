@@ -3077,16 +3077,7 @@ _pl_loader = brand_loader(
 R = train_pipeline(dataset)
 _pl_loader.empty()
 
-# ─────────────────────────────────────────────────────────────────────────
-# Context strip
-# ─────────────────────────────────────────────────────────────────────────
-context_items = [
-    ("HCPs (total)", f"{len(R['ids']):,}"),
-    ("HCPs (labeled)", f"{R['n_labeled']:,}"),
-    ("HCPs (unlabeled)", f"{R['n_unlabeled']:,}"),
-    ("Model", "Ordinal v3.2"),
-]
-context_strip(context_items, accent_index=0)
+# (Context strip removed — the hero already shows the active model + dataset)
 
 
 # ============================================================
