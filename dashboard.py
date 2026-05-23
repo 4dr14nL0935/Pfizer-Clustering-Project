@@ -15,6 +15,7 @@ Run with:
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.express as px
 import plotly.graph_objects as go
 from PIL import Image
@@ -2729,6 +2730,11 @@ def _render_cover():
     # DOM without its CSS while the dashboard re-rendered.
     def _enter_dashboard_cb():
         st.session_state.entered_dashboard = True
+        # Flag picked up by the dashboard render to scroll the page to
+        # the very top — otherwise the browser keeps the user's scroll
+        # position from the cover (often near the Enter button at the
+        # bottom of the cover page).
+        st.session_state.scroll_top_after_enter = True
 
     st.markdown('<div style="height:18px;"></div>', unsafe_allow_html=True)
     bcol_l, bcol_m, bcol_r = st.columns([1, 1, 1])
@@ -2756,6 +2762,70 @@ def _render_cover():
 if not st.session_state.entered_dashboard:
     _render_cover()
     st.stop()
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Scroll to top after entering the dashboard.
+# Without this, the browser keeps the user's scroll position from the
+# cover (usually at the very bottom, near the Enter Dashboard button)
+# and the dashboard appears to "open partway down".
+#
+# Implementation notes:
+#   · streamlit.components.v1.html actually loads & executes scripts
+#     inside its iframe — st.markdown with a srcdoc iframe sometimes
+#     does not when display:none is used.
+#   · We attempt the scroll multiple times with increasing delays
+#     because Streamlit re-renders charts/components asynchronously
+#     after the initial paint, which can push the scroll position
+#     back down.
+#   · A MutationObserver also catches subsequent DOM changes for ~3s
+#     so any late-arriving content can't undo the scroll.
+# ─────────────────────────────────────────────────────────────────────────
+if st.session_state.get("scroll_top_after_enter"):
+    st.session_state.scroll_top_after_enter = False
+    components.html(
+        """
+        <script>
+            (function() {
+                function jumpTop() {
+                    try {
+                        var w = window.parent;
+                        var d = w.document;
+                        w.scrollTo(0, 0);
+                        if (d.documentElement) d.documentElement.scrollTop = 0;
+                        if (d.body) d.body.scrollTop = 0;
+                        // Streamlit's main scrollable element
+                        var main = d.querySelector(
+                            'section[data-testid="stMain"]'
+                        );
+                        if (main) main.scrollTop = 0;
+                        var app = d.querySelector(
+                            '[data-testid="stAppViewContainer"]'
+                        );
+                        if (app) app.scrollTop = 0;
+                    } catch (e) {}
+                }
+
+                // Immediate + staggered attempts (some content renders
+                // asynchronously and would otherwise overwrite the scroll)
+                jumpTop();
+                [0, 50, 150, 350, 700, 1200, 2000].forEach(function(t) {
+                    setTimeout(jumpTop, t);
+                });
+
+                // Catch late renders for the first 3 seconds
+                try {
+                    var doc = window.parent.document;
+                    var obs = new window.parent.MutationObserver(jumpTop);
+                    obs.observe(doc.body, { childList: true, subtree: true });
+                    setTimeout(function() { obs.disconnect(); }, 3000);
+                } catch (e) {}
+            })();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────
