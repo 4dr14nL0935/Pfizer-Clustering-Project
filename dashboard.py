@@ -1876,21 +1876,24 @@ def context_strip(items, accent_index=None):
 def sb_label(icon, title, color="blue"):
     """Sidebar group label. `icon` is kept for backwards-compat but is only
     rendered when non-empty so an empty string doesn't leave a visual gap.
-    The colored vertical bar on the left replaces the missing icon slot."""
+    The colored vertical bar on the left replaces the missing icon slot.
+
+    The HTML is built as a single-line string because Streamlit's markdown
+    pipeline otherwise wraps blank-line segments in <p> tags and escapes
+    the surrounding tag characters as plain text.
+    """
     icon_html = (
         f'<span class="sb-label-icon">{icon}</span>'
         if icon and icon.strip() else ""
     )
-    st.sidebar.markdown(
-        f"""
-        <div class="sb-label">
-            <div class="sb-label-bar {color}"></div>
-            {icon_html}
-            <span class="sb-label-text">{title}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    html = (
+        f'<div class="sb-label">'
+        f'<div class="sb-label-bar {color}"></div>'
+        f'{icon_html}'
+        f'<span class="sb-label-text">{title}</span>'
+        f'</div>'
     )
+    st.sidebar.markdown(html, unsafe_allow_html=True)
 
 
 def sb_current(label, value):
@@ -3040,22 +3043,6 @@ _model_meta_html = (
 st.sidebar.markdown(_model_meta_html, unsafe_allow_html=True)
 
 sb_divider()
-
-
-
-st.sidebar.markdown(
-    f"""
-    <div class="sb-footer">
-        <div style="font-size:10px;color:#64748B;letter-spacing:.7px;
-                    font-weight:700;text-transform:uppercase;">Reproducibility</div>
-        <div class="sb-footer-row"><span>Random seed</span><span class="sb-footer-key">{SEED}</span></div>
-        <div class="sb-footer-row"><span>CV folds</span><span class="sb-footer-key">5</span></div>
-        <div class="sb-footer-row"><span>P(A) cutoff</span><span class="sb-footer-key">{THR_A}</span></div>
-        <div class="sb-footer-row"><span>P(C) cutoff</span><span class="sb-footer-key">{THR_C}</span></div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 # ─────────────────────────────────────────────────────────────────────────
 # Hero
