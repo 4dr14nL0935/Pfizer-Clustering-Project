@@ -749,6 +749,59 @@ st.markdown(
     .stAlert { border-radius: 12px !important; }
     .stProgress > div > div > div > div { background: #0070BF !important; }
 
+    /* ── Segment KPI cards (reusable from any tab — same look as cover) ── */
+    .seg-stat {
+        background: white;
+        border-radius: 16px;
+        padding: 22px 24px;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 4px 12px rgba(15,23,42,0.04);
+        position: relative;
+        overflow: hidden;
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .seg-stat:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 30px rgba(15,23,42,0.10);
+    }
+    .seg-stat::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 5px;
+    }
+    .seg-stat.SEG_A::before { background: linear-gradient(90deg, #2E6CB0, #0072CE); }
+    .seg-stat.SEG_B::before { background: linear-gradient(90deg, #F47B20, #FDB913); }
+    .seg-stat.SEG_C::before { background: linear-gradient(90deg, #C44E52, #DC2626); }
+    .seg-stat.Unlabeled::before { background: linear-gradient(90deg, #94A3B8, #CBD5E1); }
+    .seg-stat-name {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        color: #64748B;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    .seg-stat-value {
+        font-size: 38px;
+        font-weight: 800;
+        color: #0B1B33;
+        line-height: 1.05;
+        letter-spacing: -1px;
+        font-feature-settings: "tnum";
+    }
+    .seg-stat-pct {
+        font-size: 14px;
+        color: #475569;
+        font-weight: 600;
+        margin-top: 6px;
+    }
+    .seg-stat-desc {
+        font-size: 12px;
+        color: #64748B;
+        margin-top: 8px;
+        line-height: 1.45;
+    }
+
     /* ────────────────────────────────────────────────────────────
        Dashboard animations — minimal & safe.
 
@@ -4730,6 +4783,47 @@ if True:
             '</div></div>',
             unsafe_allow_html=True,
         )
+
+        # ── Segment redistribution after +1 visit (same card style as the cover) ──
+        section("HCPs per segment — after +1 visit",
+                "Where the SEG_B universe ends up once we add one extra "
+                "rep visit to every doctor.",
+                icon="")
+
+        plus1_b_to_c   = int(plus1_row["B→C"])
+        plus1_b_to_a   = int(plus1_row["B→A"])
+        plus1_b_stays  = int(plus1_row["B stays"])
+
+        _seg_descs_cf = {
+            "SEG_A": "Re-classified upward — model now confidently predicts SEG_A.",
+            "SEG_B": "Still SEG_B — engagement bump wasn't enough to flip them.",
+            "SEG_C": "Flipped to SEG_C — high-value converts unlocked by the +1 visit.",
+        }
+        _seg_after = [
+            ("SEG_A", plus1_b_to_a,  _seg_descs_cf["SEG_A"]),
+            ("SEG_B", plus1_b_stays, _seg_descs_cf["SEG_B"]),
+            ("SEG_C", plus1_b_to_c,  _seg_descs_cf["SEG_C"]),
+        ]
+
+        def _seg_card_html_cf(seg, count, total, desc):
+            pct = count / max(total, 1) * 100
+            return (
+                f'<div class="seg-stat {seg}">'
+                f'<div class="seg-stat-name">{seg.replace("_", " ")}</div>'
+                f'<div class="seg-stat-value">{count:,}</div>'
+                f'<div class="seg-stat-pct">'
+                f'{pct:.1f}% of {total:,} SEG_B HCPs</div>'
+                f'<div class="seg-stat-desc">{desc}</div>'
+                f'</div>'
+            )
+
+        seg_cols = st.columns(3)
+        for ax, (seg, count, desc) in zip(seg_cols, _seg_after):
+            with ax:
+                st.markdown(
+                    _seg_card_html_cf(seg, count, n_seg_b, desc),
+                    unsafe_allow_html=True,
+                )
 
         # ── Scenario impact bar chart ──
         section("Scenario impact",
