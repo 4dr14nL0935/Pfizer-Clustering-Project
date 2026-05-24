@@ -750,65 +750,45 @@ st.markdown(
     .stProgress > div > div > div > div { background: #0070BF !important; }
 
     /* ────────────────────────────────────────────────────────────
-       Dashboard-wide entrance & transition animations.
-       Anything that materialises inside the main area fades up
-       smoothly instead of popping in.
+       Dashboard animations — minimal & safe.
+
+       Streamlit re-renders every tab's content on every widget
+       interaction, even tabs that aren't visible.  Animating tab
+       panels or every Plotly chart re-fires those animations on
+       each rerun and causes layout shifts that scroll the page
+       (the user reported this when toggling the Probability Map
+       color radio).  So we keep ONLY:
+
+         · KPI card fade (top of each tab — short distance, OK)
+         · Tab pill scale-pulse (fixed-size element, can't shift layout)
+         · Info-panel fade
+         · Hover micro-interactions
+
+       Charts, dataframes, tab panels, and expanders get NO entrance
+       animation — they render in place, no jump.
     ──────────────────────────────────────────────────────────── */
 
-    /* Every Plotly chart fades up on mount */
-    section[data-testid="stMain"] .stPlotlyChart,
-    section[data-testid="stMain"] [data-testid="stPlotlyChart"] {
-        animation: chartIn 0.55s cubic-bezier(.2, .8, .25, 1) both;
-    }
-    @keyframes chartIn {
-        0%   { opacity: 0; transform: translateY(14px) scale(0.985); }
-        60%  { opacity: 1; }
-        100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
+    @keyframes opacityIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* Dataframes fade in (no movement so the user's scroll is stable) */
-    section[data-testid="stMain"] [data-testid="stDataFrame"],
-    section[data-testid="stMain"] [data-testid="stTable"] {
-        animation: tableIn 0.45s ease-out both;
-    }
-    @keyframes tableIn {
-        from { opacity: 0; transform: translateY(6px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* KPI card row — stagger so they cascade in */
+    /* KPI cards fade in — staggered cascade.  Safe because cards
+       have fixed dimensions and the animation is pure opacity. */
     section[data-testid="stMain"] .kpi-card {
-        animation: kpiIn 0.5s cubic-bezier(.2, .8, .25, 1) both;
+        animation: opacityIn 0.35s ease-out both;
     }
-    @keyframes kpiIn {
-        from { opacity: 0; transform: translateY(10px) scale(0.97); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    /* The KPI cards live inside successive st.columns blocks — animate
-       them with increasing delay so they appear left-to-right */
     section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
         > [data-testid="column"]:nth-child(1) .kpi-card { animation-delay: 0ms; }
     section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
-        > [data-testid="column"]:nth-child(2) .kpi-card { animation-delay: 60ms; }
+        > [data-testid="column"]:nth-child(2) .kpi-card { animation-delay: 50ms; }
     section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
-        > [data-testid="column"]:nth-child(3) .kpi-card { animation-delay: 120ms; }
+        > [data-testid="column"]:nth-child(3) .kpi-card { animation-delay: 100ms; }
     section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
-        > [data-testid="column"]:nth-child(4) .kpi-card { animation-delay: 180ms; }
+        > [data-testid="column"]:nth-child(4) .kpi-card { animation-delay: 150ms; }
     section[data-testid="stMain"] [data-testid="stHorizontalBlock"]
-        > [data-testid="column"]:nth-child(5) .kpi-card { animation-delay: 240ms; }
+        > [data-testid="column"]:nth-child(5) .kpi-card { animation-delay: 200ms; }
 
-    /* Tab content fades in smoothly when switching tabs */
-    section[data-testid="stMain"] [data-baseweb="tab-panel"] {
-        animation: tabPanelIn 0.35s ease-out both;
-    }
-    @keyframes tabPanelIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Tab switch micro-interaction — quick scale pulse on active */
+    /* Tab pill micro-pulse — pure scale on fixed-size element */
     .stTabs [aria-selected="true"] {
-        animation: tabSelect 0.30s cubic-bezier(.2, .8, .25, 1);
+        animation: tabSelect 0.28s cubic-bezier(.2, .8, .25, 1);
     }
     @keyframes tabSelect {
         0%   { transform: scale(0.96); }
@@ -816,17 +796,8 @@ st.markdown(
         100% { transform: scale(1); }
     }
 
-    /* Expander content fades down */
-    section[data-testid="stMain"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
-        animation: expandIn 0.30s ease-out both;
-    }
-    @keyframes expandIn {
-        from { opacity: 0; transform: translateY(-4px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Info panels — gentle fade-up */
-    .info-panel { animation: slideUp 0.4s ease both; }
+    /* Info panels fade in */
+    .info-panel { animation: opacityIn 0.35s ease both; }
 
     /* Smooth chart container hover (the lift was previously instant) */
     .stPlotlyChart {
@@ -854,17 +825,12 @@ st.markdown(
         transition: transform 0.15s ease, box-shadow 0.15s ease !important;
     }
 
-    /* Reduce-motion respect: disable all the entrance animations for
-       users who have prefers-reduced-motion set */
+    /* Reduce-motion respect: disable entrance animations for users
+       who have prefers-reduced-motion set */
     @media (prefers-reduced-motion: reduce) {
-        section[data-testid="stMain"] .stPlotlyChart,
-        section[data-testid="stMain"] [data-testid="stDataFrame"],
-        section[data-testid="stMain"] [data-testid="stTable"],
         section[data-testid="stMain"] .kpi-card,
-        section[data-testid="stMain"] [data-baseweb="tab-panel"],
         .info-panel,
-        section[data-testid="stMain"] [data-testid="stExpander"]
-            [data-testid="stExpanderDetails"] {
+        .stTabs [aria-selected="true"] {
             animation: none !important;
         }
     }
@@ -3251,14 +3217,22 @@ st.markdown(
 )
 
 # ─────────────────────────────────────────────────────────────────────────
-# Train pipeline (cached)
+# Train pipeline (cached).
+# The branded loader only shows on the FIRST dashboard load.  Showing it
+# on every rerun caused a layout shift (loader inserted, then removed)
+# that scrolled the page whenever a widget like the Probability Map's
+# color radio was clicked.
 # ─────────────────────────────────────────────────────────────────────────
-_pl_loader = brand_loader(
-    "Loading dashboard",
-    "Reading cached model · scoring HCPs · preparing visualisations",
-)
-R = train_pipeline(dataset)
-_pl_loader.empty()
+if not st.session_state.get("dashboard_first_render_done"):
+    _pl_loader = brand_loader(
+        "Loading dashboard",
+        "Reading cached model · scoring HCPs · preparing visualisations",
+    )
+    R = train_pipeline(dataset)
+    _pl_loader.empty()
+    st.session_state.dashboard_first_render_done = True
+else:
+    R = train_pipeline(dataset)   # cached → instant, no loader needed
 
 # (Context strip removed — the hero already shows the active model + dataset)
 
@@ -3658,241 +3632,251 @@ if True:
                 "P(A) · P(B) · P(C). Color = predicted segment",
                 icon="")
 
-        # Build full data frame (all HCPs)
-        df_full_map = pd.DataFrame({
-            "HCP_ID": R["ids"],
-            "P(A)": R["full"][model_pick]["P_A"],
-            "P(B)": R["full"][model_pick]["P_B"],
-            "P(C)": R["full"][model_pick]["P_C"],
-            "Predicted": R["full"][model_pick]["pred"],
-            "True ATSEG": np.where(R["is_labeled"], R["y_true"], "Unlabeled"),
-        })
+        # ── Fragment isolation ──────────────────────────────────────
+        # Wrapping the entire probability-map UI in @st.fragment makes
+        # the radio / search-box interactions re-run ONLY this block —
+        # NOT the whole script.  This fixes the bug where clicking the
+        # "Color points by" radio caused the active-tab state to reset
+        # and the page jumped to the bottom of Data Overview.
+        @st.fragment
+        def _probability_map_fragment():
+            # Build full data frame (all HCPs)
+            df_full_map = pd.DataFrame({
+                "HCP_ID": R["ids"],
+                "P(A)": R["full"][model_pick]["P_A"],
+                "P(B)": R["full"][model_pick]["P_B"],
+                "P(C)": R["full"][model_pick]["P_C"],
+                "Predicted": R["full"][model_pick]["pred"],
+                "True ATSEG": np.where(R["is_labeled"], R["y_true"], "Unlabeled"),
+            })
 
-        # Controls row: color toggle + search input
-        col_clr, col_search = st.columns([2, 3])
-        with col_clr:
-            # 🔥 CORRECCIÓN: Añadimos la opción filtrada en el componente de Radio
-            color_by = st.radio("Color points by",
-                                 ["Predicted Segment", "True ATSEG", "True Segment (Labeled Only)"],
-                                 horizontal=True, key="map_color_by")
-        with col_search:
-            highlight_q = st.text_input(
-                "🔍  Highlight HCP",
-                placeholder="Enter HCP ID (NUEVO_ID) to highlight in the map",
-                key="map_highlight_id",
-                label_visibility="collapsed",
-            )
+            # Controls row: color toggle + search input
+            col_clr, col_search = st.columns([2, 3])
+            with col_clr:
+                # 🔥 CORRECCIÓN: Añadimos la opción filtrada en el componente de Radio
+                color_by = st.radio("Color points by",
+                                     ["Predicted Segment", "True ATSEG", "True Segment (Labeled Only)"],
+                                     horizontal=True, key="map_color_by")
+            with col_search:
+                highlight_q = st.text_input(
+                    "🔍  Highlight HCP",
+                    placeholder="Enter HCP ID (NUEVO_ID) to highlight in the map",
+                    key="map_highlight_id",
+                    label_visibility="collapsed",
+                )
         
-        # 🔥 CORRECCIÓN: Si eligen filtrar, removemos los Unlabeled antes de graficar todo el mapa
-        if color_by == "True Segment (Labeled Only)":
-            df_full_map = df_full_map[df_full_map["True ATSEG"] != "Unlabeled"].reset_index(drop=True)
-            color_col = "True ATSEG"
-        else:
-            color_col = "Predicted" if color_by == "Predicted Segment" else "True ATSEG"
-
-        # Resolve highlight
-        highlight_row = None
-        if highlight_q.strip():
-            # Buscamos el ID en el dataframe actual disponible
-            matches = df_full_map[df_full_map["HCP_ID"] == highlight_q.strip()]
-            if len(matches) == 0:
-                st.warning(f"No HCP found with ID `{highlight_q.strip()}` en esta vista.")
+            # 🔥 CORRECCIÓN: Si eligen filtrar, removemos los Unlabeled antes de graficar todo el mapa
+            if color_by == "True Segment (Labeled Only)":
+                df_full_map = df_full_map[df_full_map["True ATSEG"] != "Unlabeled"].reset_index(drop=True)
+                color_col = "True ATSEG"
             else:
-                # Extraemos la fila directamente como un diccionario
-                highlight_row = matches.iloc[0].to_dict()
+                color_col = "Predicted" if color_by == "Predicted Segment" else "True ATSEG"
 
-        # Subsample background points for performance, always keep highlight
-        N_MAX = 5000
-        if len(df_full_map) > N_MAX:
-            df_plot = df_full_map.sample(N_MAX, random_state=SEED)
-            if highlight_row is not None and (
-                highlight_row["HCP_ID"] not in df_plot["HCP_ID"].values
-            ):
-                df_plot = pd.concat([df_plot, df_full_map[
-                    df_full_map["HCP_ID"] == highlight_row["HCP_ID"]
-                ]], ignore_index=True)
-        else:
-            df_plot = df_full_map
+            # Resolve highlight
+            highlight_row = None
+            if highlight_q.strip():
+                # Buscamos el ID en el dataframe actual disponible
+                matches = df_full_map[df_full_map["HCP_ID"] == highlight_q.strip()]
+                if len(matches) == 0:
+                    st.warning(f"No HCP found with ID `{highlight_q.strip()}` en esta vista.")
+                else:
+                    # Extraemos la fila directamente como un diccionario
+                    highlight_row = matches.iloc[0].to_dict()
 
-        if highlight_row is not None:
-            # Background: every point in gray so the highlighted HCP stands out
-            df_bg = df_plot[df_plot["HCP_ID"] != highlight_row["HCP_ID"]]
-            fig = go.Figure()
-            fig.add_trace(go.Scatter3d(
-                x=df_bg["P(A)"], y=df_bg["P(B)"], z=df_bg["P(C)"],
-                mode="markers",
-                marker=dict(size=3.0, color="#78909C", opacity=0.75,
-                             line=dict(width=0)),
-                name="Other HCPs",
-                hovertemplate=("HCP %{customdata[0]}<br>"
-                                "Pred %{customdata[1]} · True %{customdata[2]}<br>"
-                                "P(A) %{x:.2f} · P(B) %{y:.2f} · P(C) %{z:.2f}"
-                                "<extra></extra>"),
-                customdata=df_bg[["HCP_ID", "Predicted", "True ATSEG"]].values,
-                showlegend=True,
-            ))
-            # Highlighted HCP keeps its segment color and looks like a normal
-            # point — the "hover" tooltip is drawn as a scene annotation.
-            hi_seg = (highlight_row[color_col]
-                       if highlight_row[color_col] in SEG_COLORS
-                       else highlight_row["Predicted"])
-            seg_color = SEG_COLORS.get(hi_seg, "#0072CE")
-            fig.add_trace(go.Scatter3d(
-                x=[highlight_row["P(A)"]],
-                y=[highlight_row["P(B)"]],
-                z=[highlight_row["P(C)"]],
-                mode="markers",
-                marker=dict(
-                    size=7, color=seg_color, opacity=1.0,
-                    line=dict(color="white", width=2),
-                ),
-                name=f"HCP {highlight_row['HCP_ID']}",
-                hovertemplate=(
+            # Subsample background points for performance, always keep highlight
+            N_MAX = 5000
+            if len(df_full_map) > N_MAX:
+                df_plot = df_full_map.sample(N_MAX, random_state=SEED)
+                if highlight_row is not None and (
+                    highlight_row["HCP_ID"] not in df_plot["HCP_ID"].values
+                ):
+                    df_plot = pd.concat([df_plot, df_full_map[
+                        df_full_map["HCP_ID"] == highlight_row["HCP_ID"]
+                    ]], ignore_index=True)
+            else:
+                df_plot = df_full_map
+
+            if highlight_row is not None:
+                # Background: every point in gray so the highlighted HCP stands out
+                df_bg = df_plot[df_plot["HCP_ID"] != highlight_row["HCP_ID"]]
+                fig = go.Figure()
+                fig.add_trace(go.Scatter3d(
+                    x=df_bg["P(A)"], y=df_bg["P(B)"], z=df_bg["P(C)"],
+                    mode="markers",
+                    marker=dict(size=3.0, color="#78909C", opacity=0.75,
+                                 line=dict(width=0)),
+                    name="Other HCPs",
+                    hovertemplate=("HCP %{customdata[0]}<br>"
+                                    "Pred %{customdata[1]} · True %{customdata[2]}<br>"
+                                    "P(A) %{x:.2f} · P(B) %{y:.2f} · P(C) %{z:.2f}"
+                                    "<extra></extra>"),
+                    customdata=df_bg[["HCP_ID", "Predicted", "True ATSEG"]].values,
+                    showlegend=True,
+                ))
+                # Highlighted HCP keeps its segment color and looks like a normal
+                # point — the "hover" tooltip is drawn as a scene annotation.
+                hi_seg = (highlight_row[color_col]
+                           if highlight_row[color_col] in SEG_COLORS
+                           else highlight_row["Predicted"])
+                seg_color = SEG_COLORS.get(hi_seg, "#0072CE")
+                fig.add_trace(go.Scatter3d(
+                    x=[highlight_row["P(A)"]],
+                    y=[highlight_row["P(B)"]],
+                    z=[highlight_row["P(C)"]],
+                    mode="markers",
+                    marker=dict(
+                        size=7, color=seg_color, opacity=1.0,
+                        line=dict(color="white", width=2),
+                    ),
+                    name=f"HCP {highlight_row['HCP_ID']}",
+                    hovertemplate=(
+                        f"<b>HCP {highlight_row['HCP_ID']}</b><br>"
+                        f"Predicted: {highlight_row['Predicted']}<br>"
+                        f"True ATSEG: {highlight_row['True ATSEG']}<br>"
+                        f"P(A): {highlight_row['P(A)']:.3f}<br>"
+                        f"P(B): {highlight_row['P(B)']:.3f}<br>"
+                        f"P(C): {highlight_row['P(C)']:.3f}"
+                        "<extra></extra>"
+                    ),
+                ))
+
+                # Compact tooltip — formatted to avoid Plotly's bounding box calculation bugs with spaces
+                tooltip_text = (
                     f"<b>HCP {highlight_row['HCP_ID']}</b><br>"
-                    f"Predicted: {highlight_row['Predicted']}<br>"
-                    f"True ATSEG: {highlight_row['True ATSEG']}<br>"
-                    f"P(A): {highlight_row['P(A)']:.3f}<br>"
-                    f"P(B): {highlight_row['P(B)']:.3f}<br>"
-                    f"P(C): {highlight_row['P(C)']:.3f}"
-                    "<extra></extra>"
-                ),
-            ))
+                    f"Pred: <b>{highlight_row['Predicted']}</b> | True: <b>{highlight_row['True ATSEG']}</b><br>"
+                    f"P(A): <b>{highlight_row['P(A)']:.2f}</b> | P(B): <b>{highlight_row['P(B)']:.2f}</b> | P(C): <b>{highlight_row['P(C)']:.2f}</b>"
+                )
 
-            # Compact tooltip — formatted to avoid Plotly's bounding box calculation bugs with spaces
-            tooltip_text = (
-                f"<b>HCP {highlight_row['HCP_ID']}</b><br>"
-                f"Pred: <b>{highlight_row['Predicted']}</b> | True: <b>{highlight_row['True ATSEG']}</b><br>"
-                f"P(A): <b>{highlight_row['P(A)']:.2f}</b> | P(B): <b>{highlight_row['P(B)']:.2f}</b> | P(C): <b>{highlight_row['P(C)']:.2f}</b>"
-            )
+                # Build the scene config — keep axis titles in the xaxis/yaxis/zaxis
+                # dicts so they're not lost when the styling block runs later.
+                fig.update_layout(scene=dict(
+                    xaxis=dict(title=dict(text="P(A)",
+                                            font=dict(color="#475569", size=12))),
+                    yaxis=dict(title=dict(text="P(B)",
+                                            font=dict(color="#475569", size=12))),
+                    zaxis=dict(title=dict(text="P(C)",
+                                            font=dict(color="#475569", size=12))),
+                    annotations=[dict(
+                        x=highlight_row["P(A)"],
+                        y=highlight_row["P(B)"],
+                        z=highlight_row["P(C)"],
+                        text=tooltip_text,
+                        showarrow=True,
+                        arrowhead=2,
+                        arrowsize=1,
+                        arrowwidth=1.5,
+                        arrowcolor=seg_color,
+                        ax=90, ay=-90,
+                        xanchor="left",
+                        yanchor="middle",
+                        align="left",
+                        bgcolor="white",
+                        bordercolor=seg_color,
+                        borderwidth=2,
+                        borderpad=14,
+                        width=260,
+                        height=85,
+                        opacity=1.0,
+                        font=dict(size=12, color="#0B1B33",
+                                    family="Inter, sans-serif"),
+                    )],
+                ))
+            else:
+                # Normal coloured map by segment
+                fig = px.scatter_3d(
+                    df_plot, x="P(A)", y="P(B)", z="P(C)",
+                    color=color_col,
+                    color_discrete_map=SEG_COLORS,
+                    opacity=0.6,
+                    hover_data={"HCP_ID": True, "Predicted": True,
+                                  "True ATSEG": True,
+                                  "P(A)": ":.2f", "P(B)": ":.2f", "P(C)": ":.2f"},
+                )
+                fig.update_traces(marker=dict(size=2.6, line=dict(width=0)))
 
-            # Build the scene config — keep axis titles in the xaxis/yaxis/zaxis
-            # dicts so they're not lost when the styling block runs later.
-            fig.update_layout(scene=dict(
-                xaxis=dict(title=dict(text="P(A)",
-                                        font=dict(color="#475569", size=12))),
-                yaxis=dict(title=dict(text="P(B)",
-                                        font=dict(color="#475569", size=12))),
-                zaxis=dict(title=dict(text="P(C)",
-                                        font=dict(color="#475569", size=12))),
-                annotations=[dict(
-                    x=highlight_row["P(A)"],
-                    y=highlight_row["P(B)"],
-                    z=highlight_row["P(C)"],
-                    text=tooltip_text,
-                    showarrow=True,
-                    arrowhead=2,
-                    arrowsize=1,
-                    arrowwidth=1.5,
-                    arrowcolor=seg_color,
-                    ax=90, ay=-90,
-                    xanchor="left",
-                    yanchor="middle",
-                    align="left",
-                    bgcolor="white",
-                    bordercolor=seg_color,
-                    borderwidth=2,
-                    borderpad=14,
-                    width=260,
-                    height=85,
-                    opacity=1.0,
+            _style_fig(fig, height=780)
+        
+            # Add non-breaking spaces to trace names to force Plotly to calculate
+            # a wider SVG clip-path, preventing the last letter from being cut off.
+            fig.for_each_trace(lambda t: t.update(name=t.name + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") if t.name else None)
+
+            # Style the 3D scene without wiping the axis titles set above
+            axis_title_font = dict(color="#475569", size=13,
+                                    family="Inter, sans-serif")
+            axis_tick_font  = dict(color="#475569", size=10,
+                                    family="Inter, sans-serif")
+            fig.update_layout(
+                # Explicit empty title — prevents the spurious "undefined" string
+                title=dict(text=""),
+                legend_title_text=color_col,
+                # Generous right margin so the legend doesn't get clipped
+                margin=dict(l=10, r=30, t=20, b=10),
+                # Move the legend INSIDE the chart (top-left of the scene)
+                # to prevent it from being clipped by Plotly's SVG boundaries
+                legend=dict(
+                    x=0.02, y=0.98,
+                    xanchor="left", yanchor="top",
+                    bgcolor="rgba(255,255,255,0.85)",
+                    borderwidth=0,
                     font=dict(size=12, color="#0B1B33",
                                 family="Inter, sans-serif"),
-                )],
-            ))
-        else:
-            # Normal coloured map by segment
-            fig = px.scatter_3d(
-                df_plot, x="P(A)", y="P(B)", z="P(C)",
-                color=color_col,
-                color_discrete_map=SEG_COLORS,
-                opacity=0.6,
-                hover_data={"HCP_ID": True, "Predicted": True,
-                              "True ATSEG": True,
-                              "P(A)": ":.2f", "P(B)": ":.2f", "P(C)": ":.2f"},
+                    itemsizing="constant",
+                ),
+                scene=dict(
+                    xaxis=dict(
+                        title=dict(text="P(A)", font=axis_title_font),
+                        tickfont=axis_tick_font,
+                        backgroundcolor="rgba(244,247,250,0.6)",
+                        gridcolor="rgba(0,0,0,0.08)",
+                        showbackground=True, zeroline=False,
+                    ),
+                    yaxis=dict(
+                        title=dict(text="P(B)", font=axis_title_font),
+                        tickfont=axis_tick_font,
+                        backgroundcolor="rgba(244,247,250,0.6)",
+                        gridcolor="rgba(0,0,0,0.08)",
+                        showbackground=True, zeroline=False,
+                    ),
+                    zaxis=dict(
+                        title=dict(text="P(C)", font=axis_title_font),
+                        tickfont=axis_tick_font,
+                        backgroundcolor="rgba(244,247,250,0.6)",
+                        gridcolor="rgba(0,0,0,0.08)",
+                        showbackground=True, zeroline=False,
+                    ),
+                    aspectmode="cube",
+                    # Slightly pulled-back camera so the simplex isn't clipped
+                    camera=dict(eye=dict(x=1.6, y=1.6, z=1.4)),
+                ),
             )
-            fig.update_traces(marker=dict(size=2.6, line=dict(width=0)))
+            st.plotly_chart(fig, use_container_width=True)
 
-        _style_fig(fig, height=780)
-        
-        # Add non-breaking spaces to trace names to force Plotly to calculate
-        # a wider SVG clip-path, preventing the last letter from being cut off.
-        fig.for_each_trace(lambda t: t.update(name=t.name + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") if t.name else None)
-
-        # Style the 3D scene without wiping the axis titles set above
-        axis_title_font = dict(color="#475569", size=13,
-                                family="Inter, sans-serif")
-        axis_tick_font  = dict(color="#475569", size=10,
-                                family="Inter, sans-serif")
-        fig.update_layout(
-            # Explicit empty title — prevents the spurious "undefined" string
-            title=dict(text=""),
-            legend_title_text=color_col,
-            # Generous right margin so the legend doesn't get clipped
-            margin=dict(l=10, r=30, t=20, b=10),
-            # Move the legend INSIDE the chart (top-left of the scene)
-            # to prevent it from being clipped by Plotly's SVG boundaries
-            legend=dict(
-                x=0.02, y=0.98,
-                xanchor="left", yanchor="top",
-                bgcolor="rgba(255,255,255,0.85)",
-                borderwidth=0,
-                font=dict(size=12, color="#0B1B33",
-                            family="Inter, sans-serif"),
-                itemsizing="constant",
-            ),
-            scene=dict(
-                xaxis=dict(
-                    title=dict(text="P(A)", font=axis_title_font),
-                    tickfont=axis_tick_font,
-                    backgroundcolor="rgba(244,247,250,0.6)",
-                    gridcolor="rgba(0,0,0,0.08)",
-                    showbackground=True, zeroline=False,
-                ),
-                yaxis=dict(
-                    title=dict(text="P(B)", font=axis_title_font),
-                    tickfont=axis_tick_font,
-                    backgroundcolor="rgba(244,247,250,0.6)",
-                    gridcolor="rgba(0,0,0,0.08)",
-                    showbackground=True, zeroline=False,
-                ),
-                zaxis=dict(
-                    title=dict(text="P(C)", font=axis_title_font),
-                    tickfont=axis_tick_font,
-                    backgroundcolor="rgba(244,247,250,0.6)",
-                    gridcolor="rgba(0,0,0,0.08)",
-                    showbackground=True, zeroline=False,
-                ),
-                aspectmode="cube",
-                # Slightly pulled-back camera so the simplex isn't clipped
-                camera=dict(eye=dict(x=1.6, y=1.6, z=1.4)),
-            ),
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        # If a highlight is active, show a small detail card below
-        if highlight_row is not None:
-            seg_class = (highlight_row["True ATSEG"]
-                          if highlight_row["True ATSEG"] in VALID_LABELS
-                          else "Unlabeled")
-            st.markdown(
-                f"""
-                <div class="info-panel">
-                    <div class="info-panel-icon"></div>
-                    <div class="info-panel-content">
-                        <b>HCP {highlight_row['HCP_ID']}</b> highlighted in gold.
-                        Predicted <b>{highlight_row['Predicted']}</b>
-                        (P(A)={highlight_row['P(A)']:.2f},
-                        P(B)={highlight_row['P(B)']:.2f},
-                        P(C)={highlight_row['P(C)']:.2f}).
-                        Ground truth ATSEG:
-                        <span class="seg-pill {seg_class}" style="margin-left:6px;">
-                            {highlight_row['True ATSEG']}
-                        </span>
+            # If a highlight is active, show a small detail card below
+            if highlight_row is not None:
+                seg_class = (highlight_row["True ATSEG"]
+                              if highlight_row["True ATSEG"] in VALID_LABELS
+                              else "Unlabeled")
+                st.markdown(
+                    f"""
+                    <div class="info-panel">
+                        <div class="info-panel-icon"></div>
+                        <div class="info-panel-content">
+                            <b>HCP {highlight_row['HCP_ID']}</b> highlighted in gold.
+                            Predicted <b>{highlight_row['Predicted']}</b>
+                            (P(A)={highlight_row['P(A)']:.2f},
+                            P(B)={highlight_row['P(B)']:.2f},
+                            P(C)={highlight_row['P(C)']:.2f}).
+                            Ground truth ATSEG:
+                            <span class="seg-pill {seg_class}" style="margin-left:6px;">
+                                {highlight_row['True ATSEG']}
+                            </span>
+                        </div>
                     </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+        _probability_map_fragment()
 
     # ── Doctor Explorer ──
     with tabs[3]:
@@ -4538,13 +4522,18 @@ if True:
                 "gaps holding them back",
                 icon="")
 
-        _cs_loader = brand_loader(
-            "Computing conversion strategy",
-            "Identifying SEG_B doctors closest to SEG_C · "
-            "scoring engagement gaps",
-        )
-        cand_df, agg_df, c_meds = compute_conversion_strategy(dataset)
-        _cs_loader.empty()
+        # Loader only on first computation — subsequent reruns hit cache
+        if not st.session_state.get("cs_first_render_done"):
+            _cs_loader = brand_loader(
+                "Computing conversion strategy",
+                "Identifying SEG_B doctors closest to SEG_C · "
+                "scoring engagement gaps",
+            )
+            cand_df, agg_df, c_meds = compute_conversion_strategy(dataset)
+            _cs_loader.empty()
+            st.session_state.cs_first_render_done = True
+        else:
+            cand_df, agg_df, c_meds = compute_conversion_strategy(dataset)
 
         # KPI strip
         n_cand = len(cand_df)
@@ -4657,13 +4646,18 @@ if True:
                 "count how many doctors flip from SEG_B to SEG_C.",
                 icon="")
 
-        _cf_loader = brand_loader(
-            "Running counterfactual scenarios",
-            "Simulating 10 engagement deltas · re-engineering features · "
-            "re-scoring the SEG_B universe",
-        )
-        CF = run_counterfactual_scenarios(dataset)
-        _cf_loader.empty()
+        # Loader only on first computation — subsequent reruns hit cache
+        if not st.session_state.get("cf_first_render_done"):
+            _cf_loader = brand_loader(
+                "Running counterfactual scenarios",
+                "Simulating 10 engagement deltas · re-engineering features · "
+                "re-scoring the SEG_B universe",
+            )
+            CF = run_counterfactual_scenarios(dataset)
+            _cf_loader.empty()
+            st.session_state.cf_first_render_done = True
+        else:
+            CF = run_counterfactual_scenarios(dataset)
 
         n_seg_b = CF["n_seg_b"]
         sm = CF["summary"]
