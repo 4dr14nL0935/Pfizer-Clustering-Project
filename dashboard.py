@@ -3127,25 +3127,42 @@ st.sidebar.markdown(
         margin-bottom: 8px !important;
         padding-bottom: 6px !important;
     }
-    /* Wide tooltip override — make sure it doesn't get clipped */
+    /* ── Tech tooltip positioning ────────────────────────────────
+       Anchor the tooltip's BOTTOM to the trigger's bottom so it
+       extends UPWARD into the available space above the trigger.
+       This guarantees the bottom of the tooltip (Training section)
+       is never clipped, no matter how tall the popup gets.
+    ──────────────────────────────────────────────────────────── */
     .sb-ds-tooltip.tech-tooltip {
+        top: auto !important;
+        bottom: 0 !important;
+        transform: none !important;
+        max-height: 85vh;
+        overflow-y: auto;
         max-width: 90vw;
+    }
+    .sb-ds-info:hover .sb-ds-tooltip.tech-tooltip {
+        transform: none !important;
+    }
+    .sb-ds-tooltip.tech-tooltip::before {
+        /* Arrow points to the trigger from the bottom-left of the tooltip */
+        top: auto !important;
+        bottom: 16px !important;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# Technical-specs tooltip — trimmed to the essentials only.
-# Removed: subsample, colsample_bytree, min_child_weight, reg_alpha/λ,
-# tree_method, class_weight  (regularisation / engine-level knobs that
-# don't change the business interpretation of the model).
+# Technical-specs tooltip — full-length labels, 2-column layout so
+# nothing gets truncated.  The taller popup is anchored vertically
+# and capped to 85vh with internal scroll as a safety net.
 _model_tooltip_html = (
     '<div class="sb-ds-tooltip tech-tooltip" '
-    'style="width:360px;padding:12px 14px;">'
+    'style="width:380px;padding:14px 18px;">'
     '<div class="ds-tooltip-title">Model Technical Specs</div>'
 
-    # Architecture (2x2)
+    # Architecture — 2 cols × 2 rows
     '<div class="tech-section">Architecture</div>'
     '<div class="tech-grid two-col">'
     '<div class="tech-row"><span>Type</span><code>Ordinal XGB</code></div>'
@@ -3154,16 +3171,16 @@ _model_tooltip_html = (
     '<div class="tech-row"><span>Stage 2</span><code>P(≥C)</code></div>'
     '</div>'
 
-    # Hyperparameters — only the ones that drive the business behaviour
+    # Hyperparameters — 2 cols × 2 rows
     '<div class="tech-section">Hyperparameters</div>'
     '<div class="tech-grid two-col">'
-    '<div class="tech-row"><span>n_est.</span><code>800</code></div>'
-    '<div class="tech-row"><span>depth</span><code>5</code></div>'
-    '<div class="tech-row"><span>lr</span><code>0.04</code></div>'
-    '<div class="tech-row"><span>SEG_C wt</span><code>×2.0</code></div>'
+    '<div class="tech-row"><span>n_estimators</span><code>800</code></div>'
+    '<div class="tech-row"><span>max_depth</span><code>5</code></div>'
+    '<div class="tech-row"><span>learning_rate</span><code>0.04</code></div>'
+    '<div class="tech-row"><span>SEG_C weight</span><code>×2.0</code></div>'
     '</div>'
 
-    # Decision cascade
+    # Decision cascade — 2 cols × 2 rows
     '<div class="tech-section">Decision Cascade</div>'
     '<div class="tech-cascade">'
     '<div>if P(A) ≥ <b>0.70</b><span class="arrow">→</span> A</div>'
@@ -3172,13 +3189,13 @@ _model_tooltip_html = (
     '<div>else<span class="arrow">→</span> B</div>'
     '</div>'
 
-    # Training & evaluation
+    # Training & evaluation — 2 cols × 2 rows
     '<div class="tech-section">Training & evaluation</div>'
     '<div class="tech-grid two-col">'
-    '<div class="tech-row"><span>CV</span><code>5-fold</code></div>'
-    '<div class="tech-row"><span>CIs</span><code>μ±1.96σ</code></div>'
-    '<div class="tech-row"><span>XAI</span><code>SHAP P≥C</code></div>'
-    '<div class="tech-row"><span>seed</span><code>42</code></div>'
+    '<div class="tech-row"><span>CV strategy</span><code>5-fold</code></div>'
+    '<div class="tech-row"><span>CI bounds</span><code>μ±1.96σ</code></div>'
+    '<div class="tech-row"><span>Explainability</span><code>SHAP P≥C</code></div>'
+    '<div class="tech-row"><span>random_state</span><code>42</code></div>'
     '</div>'
 
     '</div>'
