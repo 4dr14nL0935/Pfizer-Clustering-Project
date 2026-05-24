@@ -1870,6 +1870,35 @@ def simulate_single_hcp(dataset_name: str, hcp_idx: int,
     return float(PA[0]), float(PB[0]), float(PC[0]), str(pred[0])
 
 
+@st.cache_data(show_spinner=False)
+def simulate_plus1_visit_all(dataset_name: str):
+    """Apply +1 DETAILS visit to EVERY HCP, re-engineer features, and
+    re-score with the Ordinal model.  Returns the new segment counts
+    for the full population — used by the cover page to show the
+    "after +1 visit" segment distribution alongside the baseline.
+    """
+    R = train_pipeline(dataset_name)
+    m1, m2 = R["final_m1"], R["final_m2"]
+    feat_cols = R["feat_cols"]
+    df_raw = load_data(dataset_name)
+
+    df_sim = df_raw.copy()
+    df_sim["DETAILS_sum"] = df_sim["DETAILS_sum"] + 1
+    df_sim = add_features(df_sim)
+    X_sim = df_sim.reindex(columns=feat_cols, fill_value=0).fillna(0).values
+    _, _, _, pred_after = predict_ordinal(m1, m2, X_sim)
+
+    seg_a = int((pred_after == "SEG_A").sum())
+    seg_b = int((pred_after == "SEG_B").sum())
+    seg_c = int((pred_after == "SEG_C").sum())
+    return {
+        "SEG_A": seg_a,
+        "SEG_B": seg_b,
+        "SEG_C": seg_c,
+        "total": int(len(pred_after)),
+    }
+
+
 def compute_conversion_strategy(dataset_name: str,
                                  n_candidates: int = N_CONVERSION_CANDIDATES):
     """Find predicted-SEG_B doctors whose P_C is highest and quantify the
@@ -2760,6 +2789,76 @@ def _render_cover():
             plot_bgcolor="rgba(0,0,0,0)",
         )
         st.plotly_chart(fig, use_container_width=True)
+
+    # ═══════════════════════════════════════════════════════════════
+    # 2b. After +1 visit — same card style, all HCPs
+    # ═══════════════════════════════════════════════════════════════
+    plus1_all = simulate_plus1_visit_all(DATASET_NAME)
+    seg_a_after = plus1_all["SEG_A"]
+    seg_b_after = plus1_all["SEG_B"]
+    seg_c_after = plus1_all["SEG_C"]
+    total_after = plus1_all["total"]
+
+    delta_a = seg_a_after - seg_a_n
+    delta_b = seg_b_after - seg_b_n
+    delta_c = seg_c_after - seg_c_n
+
+    def _delta_phrase(d):
+        if d > 0:
+            return f"▲ {d:,} more vs baseline"
+        if d < 0:
+            return f"▼ {-d:,} fewer vs baseline"
+        return "= same as baseline"
+
+    seg_after_descs = {
+        "SEG_A": _delta_phrase(delta_a),
+        "SEG_B": _delta_phrase(delta_b),
+        "SEG_C": _delta_phrase(delta_c),
+    }
+
+    st.markdown(
+        f'<div class="cover-wrap">'
+        f'<div class="cover-section">HCPs Classified per Segment — after +1 visit '
+        f'<span class="count-chip">{total_after:,} total</span></div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    def _seg_html_after(seg, count, total, desc):
+        pct = count / max(total, 1) * 100
+        return (
+            f'<div class="seg-stat {seg}">'
+            f'<div class="seg-stat-name">{seg.replace("_", " ")}</div>'
+            f'<div class="seg-stat-value">{count:,}</div>'
+            f'<div class="seg-stat-pct">{pct:.1f}% of {total:,} HCPs</div>'
+            f'<div class="seg-stat-desc">{desc}</div>'
+            f'</div>'
+        )
+
+    a_col, b_col, c_col = st.columns(3)
+    with a_col:
+        st.markdown(_seg_html_after("SEG_A", seg_a_after, total_after,
+                                       seg_after_descs["SEG_A"]),
+                     unsafe_allow_html=True)
+    with b_col:
+        st.markdown(_seg_html_after("SEG_B", seg_b_after, total_after,
+                                       seg_after_descs["SEG_B"]),
+                     unsafe_allow_html=True)
+    with c_col:
+        st.markdown(_seg_html_after("SEG_C", seg_c_after, total_after,
+                                       seg_after_descs["SEG_C"]),
+                     unsafe_allow_html=True)
+
+    st.markdown(
+        '<div style="font-size:12px;color:#64748B;'
+        'padding:8px 4px 16px 4px;line-height:1.55;">'
+        'Counterfactual scenario: <b style="color:#003B71">+1 DETAILS visit</b> '
+        'applied to every HCP, features re-engineered, and the Ordinal '
+        'model re-scored. The deltas show how the population redistributes '
+        'compared to the baseline above.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # ═══════════════════════════════════════════════════════════════
     # 3. How it works — 4-step pipeline
@@ -4783,47 +4882,6 @@ if True:
             '</div></div>',
             unsafe_allow_html=True,
         )
-
-        # ── Segment redistribution after +1 visit (same card style as the cover) ──
-        section("HCPs per segment — after +1 visit",
-                "Where the SEG_B universe ends up once we add one extra "
-                "rep visit to every doctor.",
-                icon="")
-
-        plus1_b_to_c   = int(plus1_row["B→C"])
-        plus1_b_to_a   = int(plus1_row["B→A"])
-        plus1_b_stays  = int(plus1_row["B stays"])
-
-        _seg_descs_cf = {
-            "SEG_A": "Re-classified upward — model now confidently predicts SEG_A.",
-            "SEG_B": "Still SEG_B — engagement bump wasn't enough to flip them.",
-            "SEG_C": "Flipped to SEG_C — high-value converts unlocked by the +1 visit.",
-        }
-        _seg_after = [
-            ("SEG_A", plus1_b_to_a,  _seg_descs_cf["SEG_A"]),
-            ("SEG_B", plus1_b_stays, _seg_descs_cf["SEG_B"]),
-            ("SEG_C", plus1_b_to_c,  _seg_descs_cf["SEG_C"]),
-        ]
-
-        def _seg_card_html_cf(seg, count, total, desc):
-            pct = count / max(total, 1) * 100
-            return (
-                f'<div class="seg-stat {seg}">'
-                f'<div class="seg-stat-name">{seg.replace("_", " ")}</div>'
-                f'<div class="seg-stat-value">{count:,}</div>'
-                f'<div class="seg-stat-pct">'
-                f'{pct:.1f}% of {total:,} SEG_B HCPs</div>'
-                f'<div class="seg-stat-desc">{desc}</div>'
-                f'</div>'
-            )
-
-        seg_cols = st.columns(3)
-        for ax, (seg, count, desc) in zip(seg_cols, _seg_after):
-            with ax:
-                st.markdown(
-                    _seg_card_html_cf(seg, count, n_seg_b, desc),
-                    unsafe_allow_html=True,
-                )
 
         # ── Scenario impact bar chart ──
         section("Scenario impact",
