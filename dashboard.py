@@ -1555,11 +1555,33 @@ def train_pipeline(dataset_name: str, n_folds: int = 5):
     y_all = df["ATSEG_first"].fillna("").astype(str).values
     ids_all = df["NUEVO_ID"].astype(str).values
 
-    # Feature columns: drop ID, label, and any week columns + non-numeric
+    # Feature columns: drop ID, label, and any week columns + non-numeric.
+    # Then ALSO drop quasi-constant and highly-correlated features — same
+    # filters as counterfactual_simulation.py, otherwise the dashboard's
+    # trained model picks different XGBoost splits and the post-+1-visit
+    # numbers won't match the original script's output (e.g. the 794 B→C
+    # converts from "+1 visit" run).
     drop_cols = {"NUEVO_ID", "ATSEG_first"}
     drop_cols |= {c for c in df.columns if c.startswith("WEEK_ID")}
     feat_cols = [c for c in df.columns
                  if c not in drop_cols and pd.api.types.is_numeric_dtype(df[c])]
+
+    # 1) Drop quasi-constant features (>= 98% of rows share one value)
+    qc_drop = [c for c in feat_cols
+               if df[c].value_counts(normalize=True, dropna=False).iloc[0] >= 0.98]
+    feat_cols = [c for c in feat_cols if c not in qc_drop]
+
+    # 2) Drop highly correlated features (|corr| > 0.95) — keep the one
+    #    with higher variance from each correlated pair
+    if len(feat_cols) > 1:
+        corr  = df[feat_cols].corr().abs()
+        upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
+        corr_drop = set()
+        for col in upper.columns:
+            for c in upper.index[upper[col] > 0.95]:
+                # drop the one with smaller variance
+                corr_drop.add(c if df[col].var() >= df[c].var() else col)
+        feat_cols = [c for c in feat_cols if c not in corr_drop]
     X_all = df[feat_cols].fillna(0).values
     X_lab = X_all[is_labeled]
     y_lab = y_all[is_labeled]
@@ -1872,30 +1894,60 @@ def simulate_single_hcp(dataset_name: str, hcp_idx: int,
 
 @st.cache_data(show_spinner=False)
 def simulate_plus1_visit_all(dataset_name: str):
-    """Apply +1 DETAILS visit to EVERY HCP, re-engineer features, and
-    re-score with the Ordinal model.  Returns the new segment counts
-    for the full population — used by the cover page to show the
-    "after +1 visit" segment distribution alongside the baseline.
+    """+1 DETAILS visit applied ONLY to predicted-SEG_B doctors (the
+    universe Pfizer would actually engage with), then re-score the
+    Ordinal model.  Same logic as counterfactual_simulation.py.
+
+    Returns the new full-population segment distribution:
+      - SEG_A and SEG_C predictions from baseline are preserved
+        (they weren't perturbed)
+      - SEG_B doctors get redistributed across A / B / C and we add
+        the flips into the appropriate buckets
     """
     R = train_pipeline(dataset_name)
     m1, m2 = R["final_m1"], R["final_m2"]
     feat_cols = R["feat_cols"]
     df_raw = load_data(dataset_name)
 
+    # Baseline ordinal predictions for the full population
+    pred_base = R["full"]["ord"]["pred"]
+    seg_b_mask = pred_base == "SEG_B"
+    seg_b_idx = np.where(seg_b_mask)[0]
+
+    # Apply +1 DETAILS visit only to predicted-SEG_B rows, then
+    # re-engineer features so ratios / log transforms propagate.
     df_sim = df_raw.copy()
-    df_sim["DETAILS_sum"] = df_sim["DETAILS_sum"] + 1
+    df_sim.loc[df_sim.index[seg_b_idx], "DETAILS_sum"] = (
+        df_sim.loc[df_sim.index[seg_b_idx], "DETAILS_sum"] + 1
+    )
     df_sim = add_features(df_sim)
     X_sim = df_sim.reindex(columns=feat_cols, fill_value=0).fillna(0).values
-    _, _, _, pred_after = predict_ordinal(m1, m2, X_sim)
+
+    # Re-score only the perturbed SEG_B rows; everyone else keeps
+    # their baseline prediction (we didn't touch their features).
+    _, _, _, pred_seg_b_after = predict_ordinal(m1, m2, X_sim[seg_b_idx])
+
+    pred_after = pred_base.copy()
+    pred_after[seg_b_idx] = pred_seg_b_after
 
     seg_a = int((pred_after == "SEG_A").sum())
     seg_b = int((pred_after == "SEG_B").sum())
     seg_c = int((pred_after == "SEG_C").sum())
+
+    # B-redistribution counters for narrative descriptions
+    b_to_c = int((pred_seg_b_after == "SEG_C").sum())
+    b_to_a = int((pred_seg_b_after == "SEG_A").sum())
+    b_stays = int((pred_seg_b_after == "SEG_B").sum())
+
     return {
         "SEG_A": seg_a,
         "SEG_B": seg_b,
         "SEG_C": seg_c,
         "total": int(len(pred_after)),
+        "n_seg_b_baseline": int(len(seg_b_idx)),
+        "b_to_c": b_to_c,
+        "b_to_a": b_to_a,
+        "b_stays": b_stays,
     }
 
 
@@ -2850,13 +2902,17 @@ def _render_cover():
                      unsafe_allow_html=True)
 
     st.markdown(
-        '<div style="font-size:12px;color:#64748B;'
-        'padding:8px 4px 16px 4px;line-height:1.55;">'
-        'Counterfactual scenario: <b style="color:#003B71">+1 DETAILS visit</b> '
-        'applied to every HCP, features re-engineered, and the Ordinal '
-        'model re-scored. The deltas show how the population redistributes '
-        'compared to the baseline above.'
-        '</div>',
+        f'<div style="font-size:12px;color:#64748B;'
+        f'padding:8px 4px 16px 4px;line-height:1.55;">'
+        f'Counterfactual scenario: <b style="color:#003B71">+1 DETAILS visit</b> '
+        f'applied only to the <b>{plus1_all["n_seg_b_baseline"]:,} '
+        f'predicted-SEG_B</b> doctors (Pfizer\'s actionable universe). '
+        f'Features are re-engineered and the Ordinal model re-scored — '
+        f'<b style="color:#003B71">{plus1_all["b_to_c"]:,}</b> doctors '
+        f'flip B → SEG_C, '
+        f'<b style="color:#003B71">{plus1_all["b_to_a"]:,}</b> move B → SEG_A, '
+        f'<b style="color:#003B71">{plus1_all["b_stays"]:,}</b> stay SEG_B.'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
