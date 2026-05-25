@@ -1217,42 +1217,57 @@ st.markdown(
     }
 
     /* ── Custom branded loader (overlay) ──────────────────────── */
+    /* Wrap the brand loader in a flex container that fills the viewport
+       vertically — pins the loading card to the centre of the screen
+       regardless of how tall the page is. */
+    .brand-loader-wrap {
+        min-height: 78vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+    }
     .brand-loader {
         text-align: center;
-        padding: 36px 28px;
+        padding: 56px 56px;
         background: white;
-        border-radius: 18px;
+        border-radius: 22px;
         border: 1px solid #E2E8F0;
-        box-shadow: 0 12px 32px rgba(15,23,42,0.10);
-        max-width: 460px;
-        margin: 60px auto;
+        box-shadow:
+            0 24px 60px rgba(15,23,42,0.14),
+            0 6px 18px rgba(15,23,42,0.06);
+        width: 100%;
+        max-width: 640px;
         animation: slideUp 0.4s ease;
     }
     .brand-loader-ring {
-        width: 68px; height: 68px;
-        border: 5px solid #DBEAFE;
+        width: 96px; height: 96px;
+        border: 7px solid #DBEAFE;
         border-top-color: #0072CE;
         border-right-color: #00B5E2;
         border-radius: 50%;
-        margin: 0 auto 18px auto;
+        margin: 0 auto 26px auto;
         animation: spin 0.9s linear infinite;
     }
     .brand-loader-title {
-        font-size: 16px;
+        font-size: 22px;
         font-weight: 800;
         color: #003B71;
         letter-spacing: 0.4px;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
     }
     .brand-loader-sub {
-        font-size: 12px;
+        font-size: 14px;
         color: #64748B;
         font-weight: 500;
+        line-height: 1.55;
+        max-width: 480px;
+        margin: 0 auto;
     }
     .brand-loader-bar {
-        margin: 22px auto 0 auto;
-        max-width: 240px;
-        height: 6px;
+        margin: 32px auto 0 auto;
+        max-width: 320px;
+        height: 8px;
         background: #EEF2F7;
         border-radius: 999px;
         overflow: hidden;
@@ -1265,11 +1280,11 @@ st.markdown(
         animation: progress 1.8s ease-in-out infinite;
     }
     .brand-loader-dots {
-        display: inline-flex; gap: 6px;
-        margin-top: 12px;
+        display: inline-flex; gap: 8px;
+        margin-top: 18px;
     }
     .brand-loader-dots > span {
-        width: 6px; height: 6px;
+        width: 8px; height: 8px;
         background: #0072CE;
         border-radius: 50%;
         animation: pulse 1.2s ease-in-out infinite;
@@ -1314,11 +1329,14 @@ st.markdown(
 
 
 def brand_loader(title: str = "Loading", sub: str = ""):
-    """Return a context manager that shows a branded loading card while a
+    """Return a placeholder showing a branded loading card while a
     block of code runs (replaces st.spinner for the heavier waits).
+    The card is wrapped in a flex container so it sits in the
+    vertical centre of the viewport.
     """
     placeholder = st.empty()
     html = (
+        f'<div class="brand-loader-wrap">'
         f'<div class="brand-loader">'
         f'<div class="brand-loader-ring"></div>'
         f'<div class="brand-loader-title">{title}</div>'
@@ -1326,7 +1344,9 @@ def brand_loader(title: str = "Loading", sub: str = ""):
         f'<div class="brand-loader-bar"><span></span></div>'
         f'<div class="brand-loader-dots">'
         f'<span></span><span></span><span></span><span></span>'
-        f'</div></div>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
     )
     placeholder.markdown(html, unsafe_allow_html=True)
     return placeholder
