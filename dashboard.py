@@ -2983,34 +2983,34 @@ def _render_cover():
     # 4. Inside the dashboard — 7 tab teaser (with hover popups)
     # ═══════════════════════════════════════════════════════════════
     tabs_meta = [
-        ("🔍", "Data Overview",
+        ("", "Data Overview",
          "ATSEG distribution by segment, histograms and box plots of the "
          "key prescribing features broken down by SEG_A / SEG_B / SEG_C."),
-        ("📈", "Performance & CIs",
+        ("", "Performance & CIs",
          "Confusion matrices (counts + row-normalised), per-segment "
          "precision & recall, and the 95% confidence-interval section: "
          "mean CI widths per segment, distribution histogram, box plot "
          "by predicted class, and the most uncertain HCPs to review."),
-        ("🌐", "Probability Map",
+        ("", "Probability Map",
          "Interactive 3D scatter of P(A) · P(B) · P(C) for every HCP, "
          "coloured by predicted or true segment. Includes a live HCP "
          "search box that highlights one point with a hover-style tooltip."),
-        ("🔬", "Doctor Explorer",
+        ("", "Doctor Explorer",
          "Per-HCP profile: ATSEG label vs model prediction, probability "
          "breakdown, per-HCP counterfactual sliders, 95% CIs, SHAP top "
          "features, prescribing profile table, and the individual radar "
          "with multiple scaling options."),
-        ("🎯", "Conversion Strategy",
+        ("", "Conversion Strategy",
          "Predicted-SEG_B doctors closest to SEG_C, ranked by P(C), with "
          "the engineered-feature gaps that hold each one back and the "
          "single top actionable lever per candidate."),
-        ("🔮", "Counterfactual",
+        ("", "Counterfactual",
          "Simulates 10 engagement deltas (+1, +2, +3, +5 visits, +1/+2 "
          "samples, combined, → SEG_C median) on the SEG_B universe. "
          "Stacked-bar scenario impact, diminishing-returns sweep, "
          "P(C) distribution shift, flipper vs stayer profile, and a "
          "downloadable list of easy-win HCPs."),
-        ("📋", "Predictions Table",
+        ("", "Predictions Table",
          "Full sortable table of every HCP — true ATSEG, predicted "
          "segment, P(A)/P(B)/P(C) with progress-bar rendering, CI lo/hi "
          "bounds per class, max CI width column, an uncertainty filter, "
