@@ -1524,8 +1524,36 @@ def predict_argmax(m, le, X):
     return P_A, P_B, P_C, pred
 
 
+def weighted_balanced_accuracy(y_true, y_pred,
+                                class_weights=None):
+    """Weighted Balanced Accuracy — same logic as
+    `weighted_balanced_accuracy.py`.
+
+    standard balanced accuracy   = mean(recall_per_class)
+    weighted balanced accuracy   = weighted_mean(recall_per_class)
+
+    Default weights: SEG_C is 2x more important (matches SEG_C_WEIGHT).
+    """
+    if class_weights is None:
+        class_weights = {"SEG_A": 1.0, "SEG_B": 1.0,
+                          "SEG_C": float(SEG_C_WEIGHT)}
+    classes = sorted(set(y_true))
+    recalls = {}
+    for cls in classes:
+        mask = y_true == cls
+        recalls[cls] = float((y_pred[mask] == cls).mean()) if mask.sum() else 0.0
+    total_w = sum(class_weights.get(c, 1.0) for c in classes)
+    if total_w == 0:
+        return 0.0
+    return sum(recalls[c] * class_weights.get(c, 1.0)
+                for c in classes) / total_w
+
+
 def metrics_for(y_true, pred):
-    acc = float((pred == y_true).mean())
+    # `accuracy` here is the Weighted Balanced Accuracy
+    # (SEG_C × 2.0), aligned with weighted_balanced_accuracy.py — the
+    # business-aware version of accuracy used across the dashboard.
+    wba = float(weighted_balanced_accuracy(y_true, pred))
     bal_acc = float(balanced_accuracy_score(y_true, pred))
     mask_C = y_true == "SEG_C"
     recall_C = float((pred[mask_C] == "SEG_C").mean()) if mask_C.sum() > 0 else 0.0
@@ -1533,8 +1561,10 @@ def metrics_for(y_true, pred):
                         / max(mask_C.sum(), 1))
     cm = confusion_matrix(y_true, pred, labels=list(VALID_LABELS))
     return {
-        "accuracy": acc, "balanced_accuracy": bal_acc,
-        "recall_C": recall_C, "c_lost_pct": c_lost_pct,
+        "accuracy": wba,                # ← now WBA (SEG_C ×2 weighting)
+        "balanced_accuracy": bal_acc,   # standard BA for comparison
+        "recall_C": recall_C,
+        "c_lost_pct": c_lost_pct,
         "confusion_matrix": cm,
     }
 
@@ -3518,12 +3548,14 @@ if True:
                  helper=f"{R['n_labeled']:,} labeled · {R['n_unlabeled']:,} unlabeled",
                  style="neutral", icon="",
                  status="info", status_label="Loaded")
-        kpi_card(cols[1], "Accuracy", f"{m['accuracy']*100:.1f}%",
-                 helper="Overall correctness",
+        kpi_card(cols[1], "Weighted Balanced Acc.",
+                 f"{m['accuracy']*100:.1f}%",
+                 helper=f"Recall-weighted avg (SEG_C ×{SEG_C_WEIGHT:.1f})",
                  style="good", icon="",
                  status=acc_s, status_label=acc_l)
-        kpi_card(cols[2], "Balanced Accuracy", f"{m['balanced_accuracy']*100:.1f}%",
-                 helper="Class-balanced score",
+        kpi_card(cols[2], "Balanced Accuracy",
+                 f"{m['balanced_accuracy']*100:.1f}%",
+                 helper="Class-balanced score (unweighted)",
                  style="accent", icon="",
                  status=acc_s, status_label=acc_l)
         kpi_card(cols[3], "Recall (SEG_C)", f"{m['recall_C']*100:.1f}%",
