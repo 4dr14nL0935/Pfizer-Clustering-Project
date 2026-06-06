@@ -1,0 +1,25 @@
+# ── Data (large / confidential — keep out of version control) ──
+data/raw/*
+data/processed/*
+*.csv
+!data/**/.gitkeep
+
+# Precomputed model artifacts
+*.pkl
+
+# Generated reports
+outputs/*
+!outputs/.gitkeep
+*.html
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

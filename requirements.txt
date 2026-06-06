@@ -1,0 +1,20 @@
+# Pfizer HCP Segmentation — Python dependencies
+#
+# Install:   pip install -r requirements.txt
+# Run app:   streamlit run app/dashboard.py
+
+# Core ML / data
+xgboost>=2.0
+scikit-learn>=1.4
+pandas>=2.0
+numpy>=1.26
+scipy>=1.11
+
+# Streamlit dashboard
+streamlit>=1.40
+plotly>=5.20
+pillow>=10.0          # logo loading in the dashboard
+
+# Static (HTML) reports & legacy notebooks
+matplotlib>=3.8
+seaborn>=0.13

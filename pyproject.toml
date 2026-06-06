@@ -1,0 +1,29 @@
+# ── Tooling configuration for the Pfizer HCP Segmentation repo ──
+# The codebase follows PEP 8 (4-space indentation, snake_case, module &
+# function docstrings throughout). Line length targets 100 columns
+# (the widely used Black/PEP 8 profile); a few long string literals
+# — insight messages and aligned constant tables — exceed it on purpose
+# for readability, which PEP 8 explicitly allows.
+#
+# Format / lint in one command (if the tools are installed):
+#   black .
+#   isort .
+#   flake8 .
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]   # Black-compatible
+exclude = [".venv", "__pycache__", "build", "dist"]
+
+[tool.pydocstyle]
+# Docstring style used across the project (NumPy-flavoured) — ready for
+# Sphinx / pdoc autodoc generation.
+convention = "numpy"
